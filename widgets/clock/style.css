@@ -1,0 +1,15 @@
+.clock { height: 100%; display: flex; flex-direction: column; justify-content: center; container-type: size; }
+.time { font-size: min(34cqh, 19cqw); font-weight: 650; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.time .sec { font-size: .45em; font-weight: 500; color: var(--ws-fg-muted); margin-left: .15em; }
+.time .ampm { font-size: .32em; font-weight: 600; color: var(--ws-fg-muted); margin-left: .25em; }
+.date { margin-top: 8px; font-size: min(12cqh, 7cqw); color: var(--ws-fg-muted); font-weight: 500; }
+.analog { height: 100%; display: flex; align-items: center; gap: 18px; }
+.analog svg { height: 100%; aspect-ratio: 1; flex: none; }
+.analog .face { fill: var(--ws-surface); stroke: var(--ws-border); }
+.analog .tick { stroke: var(--ws-fg-muted); stroke-linecap: round; }
+.analog .hand { stroke: var(--ws-fg); stroke-linecap: round; transform-origin: 50px 50px; }
+.analog .hand.s { stroke: var(--ws-accent); }
+.analog .side { min-width: 0; }
+.analog .side .d1 { font-size: 22px; font-weight: 650; }
+.expanded .time { font-size: min(30cqh, 16cqw); }
+.expanded { align-items: center; text-align: center; }

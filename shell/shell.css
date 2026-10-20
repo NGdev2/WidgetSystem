@@ -1,0 +1,202 @@
+:root {
+  --ws-font: system-ui, "Inter", "Ubuntu", "Cantarell", sans-serif;
+  --ws-accent: #4f8cff;
+  --ws-radius: 18px;
+  /* light */
+  --ws-fg: #15171c;
+  --ws-fg-muted: rgba(21, 23, 28, .58);
+  --ws-surface: rgba(255, 255, 255, .45);
+  --ws-surface-hover: rgba(255, 255, 255, .7);
+  --ws-border: rgba(0, 0, 0, .08);
+  --ws-tint: rgba(255, 255, 255, .42);
+  --ws-tint-plain: rgba(250, 250, 252, .72);
+  --ws-solid: #f6f6f8;
+  --ws-edge: rgba(255, 255, 255, .55);
+  --ws-shadow: 0 12px 34px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .12);
+  --ws-panel: rgba(250, 250, 252, .86);
+}
+:root[data-theme="dark"] {
+  --ws-fg: #f3f4f7;
+  --ws-fg-muted: rgba(243, 244, 247, .6);
+  --ws-surface: rgba(255, 255, 255, .08);
+  --ws-surface-hover: rgba(255, 255, 255, .16);
+  --ws-border: rgba(255, 255, 255, .1);
+  --ws-tint: rgba(22, 24, 32, .42);
+  --ws-tint-plain: rgba(24, 26, 34, .72);
+  --ws-solid: #1d1f27;
+  --ws-edge: rgba(255, 255, 255, .16);
+  --ws-shadow: 0 14px 38px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .3);
+  --ws-panel: rgba(28, 30, 38, .88);
+}
+
+html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
+body { font-family: var(--ws-font); color: var(--ws-fg); -webkit-font-smoothing: antialiased; }
+/* In a normal browser (dev mode) show the wallpaper so it looks like the desktop. */
+body.ws-browser { background: #3b4252 var(--ws-wallpaper, none) center / cover no-repeat; }
+
+#ws-desk, #ws-overlay, #ws-bubbles, #ws-ui { position: fixed; inset: 0; pointer-events: none; }
+#ws-particles { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+#ws-overlay { z-index: 3; }
+#ws-bubbles { z-index: 6; }
+#ws-ui { z-index: 10; }
+#ws-overlay > *, #ws-ui > * { pointer-events: auto; }
+body.ws-hidden #ws-desk, body.ws-hidden #ws-overlay, body.ws-hidden #ws-bubbles { opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
+
+/* ---------- frame ---------- */
+.ws-frame {
+  position: absolute; pointer-events: auto; border-radius: var(--r, 18px);
+  transition: box-shadow .2s, opacity .3s, transform .3s;
+  animation: ws-pop .35s cubic-bezier(.2, 1.2, .4, 1);
+}
+.ws-frame.ws-animate { transition: left .35s cubic-bezier(.3, 1, .4, 1), top .35s cubic-bezier(.3, 1, .4, 1), width .35s cubic-bezier(.3, 1, .4, 1), height .35s cubic-bezier(.3, 1, .4, 1), border-radius .35s; }
+.ws-frame.ws-closing { opacity: 0; transform: scale(.9); }
+@keyframes ws-pop { from { opacity: 0; transform: scale(.94); } }
+.ws-frame[data-shadow="true"] { box-shadow: var(--ws-shadow); }
+.ws-frame.ws-expanded { z-index: 2; }
+
+.ws-bg { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.ws-bg-img { position: absolute; background-size: cover; background-position: center; display: none; }
+.ws-frame[data-look="glass"] .ws-bg-img { display: block; }
+.ws-bg::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.ws-frame[data-look="glass"] .ws-bg::after { background: var(--tint, var(--ws-tint)); }
+.ws-frame[data-look="tint"] .ws-bg::after { background: var(--tint, var(--ws-tint-plain)); }
+.ws-frame[data-look="solid"] .ws-bg::after { background: var(--tint, var(--ws-solid)); }
+.ws-frame[data-look="glass"] .ws-bg { backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4); }
+.ws-frame[data-border="true"]::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: 1px solid var(--ws-edge); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+.ws-frame[data-look="clear"] { box-shadow: none !important; }
+.ws-frame[data-look="clear"]::after { display: none; }
+
+.ws-body { position: absolute; inset: 0; display: flex; flex-direction: column; border-radius: inherit; }
+.ws-frame[data-overflow="hidden"] .ws-body { overflow: hidden; }
+.ws-titlebar {
+  display: none; flex: none; align-items: center; gap: 8px; height: 34px; padding: 0 8px 0 14px;
+  font-size: 12.5px; font-weight: 600; color: var(--ws-fg-muted); cursor: grab; letter-spacing: .01em;
+}
+.ws-frame[data-title="true"] .ws-titlebar { display: flex; }
+.ws-titlebar .ws-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-content { position: relative; flex: 1; min-height: 0; min-width: 0; padding: var(--pad, 14px) !important; box-sizing: border-box !important; }
+.ws-frame[data-title="true"] .ws-content { padding-top: calc(var(--pad, 14px) * .4); }
+
+/* hover controls (top-right) */
+.ws-controls {
+  position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; z-index: 3;
+  opacity: 0; transform: translateY(-2px); transition: opacity .15s, transform .15s;
+}
+.ws-frame:hover > .ws-controls, .ws-frame.ws-menu-open > .ws-controls { opacity: 1; transform: none; }
+.ws-frame[data-title="true"] > .ws-controls { top: 5px; }
+.ws-ctl {
+  width: 24px; height: 24px; border-radius: 8px; border: 0; padding: 0; cursor: pointer;
+  display: grid; place-items: center; color: var(--ws-fg); background: var(--ws-panel);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .18); font-size: 13px; line-height: 1;
+}
+.ws-ctl:hover { background: var(--ws-accent); color: #fff; }
+.ws-ctl svg { width: 13px; height: 13px; }
+
+.ws-resize {
+  position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; cursor: nwse-resize; z-index: 4;
+  opacity: 0; transition: opacity .15s;
+}
+.ws-resize::before { content: ""; position: absolute; right: 7px; bottom: 7px; width: 7px; height: 7px; border-right: 2px solid var(--ws-fg-muted); border-bottom: 2px solid var(--ws-fg-muted); border-radius: 0 0 3px 0; }
+.ws-frame:hover > .ws-resize { opacity: .8; }
+.ws-frame.ws-expanded > .ws-resize, .ws-frame[data-resizable="false"] > .ws-resize { display: none; }
+
+.ws-error { position: absolute; inset: 0; padding: 14px; font: 12px/1.4 ui-monospace, monospace; color: #ff6b6b; overflow: auto; background: rgba(20, 0, 0, .55); border-radius: inherit; user-select: text; }
+.ws-error button { margin-top: 8px; }
+
+/* ---------- edit mode ---------- */
+body.ws-edit { background-color: rgba(0, 0, 0, .18); transition: background-color .2s; }
+body.ws-edit.ws-browser { background-blend-mode: multiply; }
+.ws-editcover { display: none; position: absolute; inset: 0; z-index: 5; cursor: move; border-radius: inherit; outline: 2px dashed rgba(255, 255, 255, .7); outline-offset: 3px; }
+body.ws-edit .ws-editcover { display: block; }
+body.ws-edit .ws-frame { animation: ws-wiggle .5s ease-in-out infinite alternate; }
+body.ws-edit .ws-frame.ws-dragging { animation: none; }
+@keyframes ws-wiggle { from { transform: rotate(-.35deg); } to { transform: rotate(.35deg); } }
+body.ws-edit .ws-resize { opacity: 1; z-index: 6; }
+.ws-editcover .ws-edit-x {
+  position: absolute; left: -10px; top: -10px; width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer;
+  background: #ff5f57; color: #fff; font-size: 15px; line-height: 24px; padding: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+}
+.ws-editcover .ws-edit-name { position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%); font-size: 12px; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); white-space: nowrap; }
+.ws-frame.ws-dragging { opacity: .92; z-index: 3; }
+
+.ws-toolbar {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center;
+  padding: 8px 10px 8px 16px; border-radius: 14px; background: var(--ws-panel); box-shadow: var(--ws-shadow);
+  backdrop-filter: blur(20px); font-size: 13px; animation: ws-pop .25s;
+}
+.ws-toolbar b { margin-right: 8px; }
+
+/* ---------- shared UI ---------- */
+.ws-btn2 {
+  font: inherit; font-size: 13px; color: var(--ws-fg); background: var(--ws-surface); border: 1px solid var(--ws-border);
+  border-radius: 9px; padding: 6px 12px; cursor: pointer;
+}
+.ws-btn2:hover { background: var(--ws-surface-hover); }
+.ws-btn2.primary { background: var(--ws-accent); color: #fff; border-color: transparent; }
+
+.ws-menu {
+  position: absolute; min-width: 210px; padding: 6px; border-radius: 12px; background: var(--ws-panel);
+  backdrop-filter: blur(24px) saturate(1.5); box-shadow: var(--ws-shadow); border: 1px solid var(--ws-border);
+  font-size: 13px; animation: ws-menu-in .14s ease-out; user-select: none;
+}
+@keyframes ws-menu-in { from { opacity: 0; transform: scale(.96) translateY(-4px); } }
+.ws-menu-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 7px; cursor: pointer; }
+.ws-menu-item:hover { background: var(--ws-accent); color: #fff; }
+.ws-menu-item .ico { width: 18px; text-align: center; }
+.ws-menu-item.danger:hover { background: #ff5f57; }
+.ws-menu-sep { height: 1px; margin: 5px 6px; background: var(--ws-border); }
+.ws-menu-label { padding: 4px 10px 2px; font-size: 11px; color: var(--ws-fg-muted); text-transform: uppercase; letter-spacing: .06em; }
+.ws-seg { display: flex; gap: 3px; padding: 3px 6px 5px; }
+.ws-seg button {
+  flex: 1; font: inherit; font-size: 12px; padding: 5px 4px; border-radius: 7px; cursor: pointer;
+  border: 1px solid var(--ws-border); background: var(--ws-surface); color: var(--ws-fg);
+}
+.ws-seg button.on { background: var(--ws-accent); color: #fff; border-color: transparent; }
+
+.ws-panel {
+  position: absolute; top: 14px; right: 14px; bottom: 14px; width: 330px; display: flex; flex-direction: column;
+  border-radius: 18px; background: var(--ws-panel); backdrop-filter: blur(30px) saturate(1.5);
+  box-shadow: var(--ws-shadow); border: 1px solid var(--ws-border); animation: ws-slide .28s cubic-bezier(.2, 1, .3, 1);
+}
+@keyframes ws-slide { from { opacity: 0; transform: translateX(30px); } }
+.ws-panel header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 10px; font-weight: 650; font-size: 15px; }
+.ws-panel .list { overflow: auto; padding: 4px 10px 14px; display: grid; gap: 8px; }
+.ws-card { display: flex; gap: 12px; align-items: center; padding: 10px; border-radius: 12px; background: var(--ws-surface); border: 1px solid var(--ws-border); }
+.ws-card .icon { font-size: 26px; width: 40px; height: 40px; display: grid; place-items: center; flex: none; }
+.ws-card .icon img { width: 36px; height: 36px; object-fit: contain; }
+.ws-card .meta { flex: 1; min-width: 0; }
+.ws-card .meta b { display: block; font-size: 13.5px; }
+.ws-card .meta span { font-size: 12px; color: var(--ws-fg-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.ws-dialog-wrap { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, .25); animation: ws-fade .2s; }
+@keyframes ws-fade { from { opacity: 0; } }
+.ws-dialog { width: 360px; max-height: 80vh; overflow: auto; padding: 18px; border-radius: 18px; background: var(--ws-panel); backdrop-filter: blur(30px); box-shadow: var(--ws-shadow); border: 1px solid var(--ws-border); animation: ws-pop .25s; }
+.ws-dialog h3 { margin: 0 0 14px; font-size: 15px; }
+.ws-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0; font-size: 13px; }
+.ws-field input[type=text], .ws-field input[type=number], .ws-field select {
+  font: inherit; color: var(--ws-fg); background: var(--ws-surface); border: 1px solid var(--ws-border); border-radius: 8px; padding: 5px 8px; width: 160px;
+}
+.ws-field input[type=range] { width: 160px; accent-color: var(--ws-accent); }
+.ws-field input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ws-accent); }
+.ws-dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+.ws-launcher {
+  position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
+  background: var(--ws-panel); color: var(--ws-fg); box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
+  opacity: .35; transition: opacity .2s, transform .2s; font-size: 15px;
+}
+.ws-launcher:hover { opacity: 1; transform: scale(1.1); }
+
+/* ---------- speech bubbles ---------- */
+.ws-bubble {
+  position: absolute; max-width: 240px; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.35;
+  background: var(--ws-panel); color: var(--ws-fg); box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+  backdrop-filter: blur(16px); transform: translate(-50%, -100%); transform-origin: 50% 100%;
+  animation: ws-bubble-in .25s cubic-bezier(.2, 1.4, .4, 1); transition: opacity .25s; pointer-events: none;
+}
+.ws-bubble::after { content: ""; position: absolute; left: 50%; bottom: -6px; width: 12px; height: 12px; margin-left: -6px; background: inherit; transform: rotate(45deg); border-radius: 0 0 3px 0; }
+.ws-bubble.out { opacity: 0; }
+@keyframes ws-bubble-in { from { opacity: 0; transform: translate(-50%, -100%) scale(.6); } }

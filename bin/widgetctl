@@ -1,0 +1,97 @@
+#!/usr/bin/env python3
+"""Control a running WidgetSystem.
+
+  widgetctl start                 start WidgetSystem in the background
+  widgetctl quit                  stop it
+  widgetctl list                  available widgets and placed instances
+  widgetctl add <widget> [json]   add an instance (json = initial settings)
+  widgetctl remove <instance>     remove an instance
+  widgetctl send <target> <json>  message an instance id, a widget id, or '*'
+  widgetctl edit                  toggle edit mode
+  widgetctl gallery               open the add-widget gallery
+  widgetctl toggle                hide/show all widgets
+  widgetctl reload                reload the whole shell
+  widgetctl devtools              open the WebKit inspector
+  widgetctl snapshot [file.png]   render the widget layer to a PNG
+  widgetctl path add|remove <dir> register a folder that contains widgets
+  widgetctl url                   print the dev URL (open in a normal browser)
+  widgetctl log                   follow the log file
+"""
+import json
+import os
+import subprocess
+import sys
+import urllib.request
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "widgetsystem.json"
+LOG = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "widgetsystem/widgetsystem.log"
+
+
+def info():
+    try:
+        return json.loads(RUNTIME.read_text())
+    except (OSError, ValueError):
+        sys.exit("WidgetSystem is not running (widgetctl start)")
+
+
+def call(method, params=None):
+    i = info()
+    req = urllib.request.Request(f"http://127.0.0.1:{i['port']}/api/{method}", data=json.dumps(params or {}).encode(),
+                                 headers={"X-WS-Token": i["token"], "Content-Type": "application/json"})
+    try:
+        res = json.loads(urllib.request.urlopen(req, timeout=10).read())
+    except OSError as e:
+        sys.exit(f"cannot reach WidgetSystem: {e}")
+    if not res["ok"]:
+        sys.exit(res["error"])
+    return res["result"]
+
+
+def main(argv):
+    if not argv or argv[0] in ("-h", "--help", "help"):
+        print(__doc__.strip())
+        return
+    cmd, rest = argv[0], argv[1:]
+    if cmd == "start":
+        subprocess.Popen([sys.executable, "-m", "widgetsystem", *rest], cwd=REPO, start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("started")
+    elif cmd == "url":
+        i = info()
+        print(f"http://127.0.0.1:{i['port']}/?token={i['token']}")
+    elif cmd == "log":
+        os.execvp("tail", ["tail", "-n", "50", "-f", str(LOG)])
+    elif cmd == "list":
+        r = call("ctl.list")
+        print("Widgets:")
+        for w in r["widgets"]:
+            print(f"  {w['id']:<16} {w['name']:<18} {w['_dir']}")
+        print("Instances:")
+        for inst in r["instances"]:
+            print(f"  {inst['id']:<16} {inst['widget']:<16} at {inst['x']},{inst['y']} {inst['w']}x{inst['h']}")
+        for p, e in r["errors"].items():
+            print(f"  ! {p}: {e}")
+    elif cmd == "add":
+        call("ctl.add", {"widget": rest[0], "settings": json.loads(rest[1]) if len(rest) > 1 else {}})
+    elif cmd == "remove":
+        call("ctl.remove", {"id": rest[0]})
+    elif cmd == "send":
+        try:
+            data = json.loads(rest[1])
+        except ValueError:
+            data = rest[1]
+        call("ctl.send", {"target": rest[0], "data": data})
+    elif cmd == "snapshot":
+        print(call("ctl.snapshot", {"path": os.path.abspath(rest[0]) if rest else None}))
+    elif cmd == "path":
+        print(json.dumps(call(f"ctl.path.{rest[0]}", {"path": rest[1]}), indent=2))
+    elif cmd in ("edit", "gallery", "toggle", "reload", "devtools", "quit"):
+        call(f"ctl.{cmd}")
+    else:
+        sys.exit(f"unknown command {cmd!r}; see widgetctl --help")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
