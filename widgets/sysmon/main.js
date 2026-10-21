@@ -4,12 +4,17 @@ export function mount(ctx) {
   ctx.root.innerHTML = `<div class="grid">
     ${['cpu', 'mem', 'bat', 'net'].map((k) => `<div class="m" data-k="${k}"><div class="l"><span>${{ cpu: 'CPU', mem: 'Memory', bat: 'Battery', net: 'Network' }[k]}</span><span class="x"></span></div><div class="v">–</div><div class="bar"><i style="width:0"></i></div></div>`).join('')}
   </div>`;
+  const last = {};
   const set = (k, value, pct, extra = '') => {
+    const width = Math.round(Math.max(0, Math.min(100, pct))) + '%';
+    const key = value + '|' + extra + '|' + width;
+    if (last[k] === key) return; // skip the repaint when nothing visible changed
+    last[k] = key;
     const el = ctx.root.querySelector(`[data-k=${k}]`);
     el.querySelector('.v').textContent = value;
     el.querySelector('.x').textContent = extra;
     const bar = el.querySelector('.bar i');
-    bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    bar.style.width = width;
     bar.classList.toggle('hot', k === 'bat' ? pct < 15 : pct > 85);
   };
   async function tick() {

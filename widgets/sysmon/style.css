@@ -3,6 +3,6 @@
 .m .l { white-space: nowrap; gap: 6px; font-size: 11px; color: var(--ws-fg-muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; }
 .m .v { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .bar { height: 5px; border-radius: 3px; background: var(--ws-surface); overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 3px; background: var(--ws-accent); transition: width .6s cubic-bezier(.3,1,.4,1), background .3s; }
+.bar i { display: block; height: 100%; border-radius: 3px; background: var(--ws-accent); } /* no transition: animating every update kept the layer repainting */
 .bar i.hot { background: #ff6b6b; }
 .m .l .x { overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }

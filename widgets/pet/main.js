@@ -70,6 +70,7 @@ export function mount(ctx) {
     pet.ground = false;
     pet.dir = Math.sign(pet.vx) || pet.dir;
     squash(0.8, 1.2);
+    wakeLoop();
   }
   function squash(sx, sy) {
     body.style.transform = `scale(${sx},${sy})`;
@@ -80,7 +81,7 @@ export function mount(ctx) {
     if (pet.sleeping) return;
     const r = Math.random();
     const speed = ctx.settings.speed;
-    pet.next = (1.5 + Math.random() * 4) / speed;
+    pet.next = (4 + Math.random() * 9) / speed; // calm: mostly resting, short trips
     const surf = surfaceOf(pet.y);
     if (r < 0.35 && platforms.length) {
       // jump to another widget (or the floor)
@@ -89,15 +90,21 @@ export function mount(ctx) {
       if (p && Math.abs(p.x + p.w / 2 - pet.x) < 900) return jumpTo(p.x + 20 + Math.random() * (p.w - 40), p.y);
     }
     if (r < 0.8) {
-      const lo = surf ? surf.x + 14 : 30, hi = surf ? surf.x + surf.w - 14 : ctx.desktop.size().w - 30;
-      pet.target = lo + Math.random() * (hi - lo);
+      const lo = Math.max(surf ? surf.x + 14 : 30, pet.x - 260);
+      const hi = Math.min(surf ? surf.x + surf.w - 14 : ctx.desktop.size().w - 30, pet.x + 260);
+      pet.target = lo + Math.random() * Math.max(0, hi - lo);
     } else if (r < 0.9 && ctx.settings.talk) {
       ctx.say(st.food < 30 ? 'I\'m hungry…' : st.fun < 30 ? 'play with me?' : PHRASES[(Math.random() * PHRASES.length) | 0], { anchor: el });
     }
   }
 
-  let blinkT = 3, lastTf = '';
-  ctx.raf((dt) => {
+  let lastTf = '', stopLoop = null;
+  const settled = () => pet.ground && pet.target == null && !pet.dragged;
+  // Even an empty animation loop costs CPU, so it only runs while Mochi is moving.
+  function wakeLoop() {
+    if (!stopLoop) stopLoop = ctx.raf(step, { fps: 40 });
+  }
+  function step(dt) {
     if (!pet.dragged) {
       if (!pet.ground) {
         pet.vy += G * dt;
@@ -118,7 +125,7 @@ export function mount(ctx) {
           pet.dir = Math.sign(d) || pet.dir;
           pet.x += pet.dir * Math.min(Math.abs(d), 70 * ctx.settings.speed * dt);
           if (Math.abs(d) < 1) pet.target = null;
-        } else if ((pet.next -= dt) <= 0) decide();
+        }
       }
       const W = ctx.desktop.size().w;
       if (pet.x < 20 || pet.x > W - 20) { pet.x = Math.max(20, Math.min(W - 20, pet.x)); pet.vx *= -0.5; pet.target = null; }
@@ -128,13 +135,23 @@ export function mount(ctx) {
     // Only touch the DOM when something moved: any change repaints the whole layer.
     const tf = `translate(${pet.x.toFixed(1)}px, ${(pet.y + bob).toFixed(1)}px) scaleX(${pet.dir})`;
     if (tf !== lastTf) { el.style.transform = tf; lastTf = tf; }
-    if ((blinkT -= dt) < 0 && !pet.sleeping) { el.classList.add('blink'); ctx.after(130, () => el.classList.remove('blink')); blinkT = 2 + Math.random() * 4; }
-  }, { fps: 40 });
+    if (settled()) { stopLoop?.(); stopLoop = null; }
+  }
+  wakeLoop();
+  // Decisions and blinking run on a cheap timer while the loop is asleep.
+  let blinkT = 3;
+  ctx.every(250, () => {
+    if (!settled()) return;
+    if ((pet.next -= 0.25) <= 0) { decide(); wakeLoop(); }
+    if ((blinkT -= 0.25) < 0 && !pet.sleeping) { el.classList.add('blink'); ctx.after(130, () => el.classList.remove('blink')); blinkT = 2 + Math.random() * 4; }
+    if (support(pet.x, pet.y) !== pet.y) wakeLoop(); // a platform moved or vanished
+  });
 
   // ---------- interaction: click = pet, drag = carry, double click = jump
   let down = null;
   el.addEventListener('pointerdown', (e) => {
     down = { x: e.clientX, y: e.clientY, moved: false };
+    wakeLoop();
     el.setPointerCapture(e.pointerId);
   });
   el.addEventListener('pointermove', (e) => {
@@ -154,7 +171,7 @@ export function mount(ctx) {
     pet.dragged = false;
     down = null;
   });
-  el.addEventListener('dblclick', () => { if (pet.ground) { pet.vy = -620; pet.ground = false; } });
+  el.addEventListener('dblclick', () => { if (pet.ground) { pet.vy = -620; pet.ground = false; wakeLoop(); } });
 
   function wake() {
     if (!pet.sleeping) return;
