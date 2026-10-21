@@ -155,7 +155,7 @@ widget that has the `data-ws-drag` attribute, or freely in edit mode.
 ### Timers (auto-cancelled on unmount)
 - `ctx.every(ms, fn)` returns a stop function
 - `ctx.after(ms, fn)` returns a cancel function
-- `ctx.raf(fn(dt, t))` starts an animation loop with `dt` in seconds and returns a stop function
+- `ctx.raf(fn(dt, t), {fps})` starts an animation loop with `dt` in seconds and returns a stop function. `fps` caps the rate (default 60). It pauses automatically while widgets are hidden
 
 ### Theme
 - `ctx.theme` is `{dark: boolean}` and follows the GNOME light/dark setting.
@@ -211,13 +211,26 @@ Icons: `/icon?name=<icon-name>&size=<px>` serves any icon from the current GTK i
   creature with `ctx.overlay.create({interactive: true})` so it can wander the whole
   screen. Use `ctx.desktop.widgets()` to find platforms to stand on.
 
+### Performance (please read)
+All widgets share **one full-screen transparent surface**. Any DOM or style change on any
+frame makes WebKit recomposite that whole surface and hand it to the window system. A
+single always-running 60 fps animation costs about 25% CPU on its own. In practice:
+- **Write to the DOM only when a value actually changed.** Even writing the same `transform`
+  string again costs a repaint.
+- **Stop or slow your loop when idle.** Sleeping or standing still means no per-frame writes.
+  Use `ctx.raf(fn, {fps: 30})` for sprites. 30 to 40 fps looks fine.
+- Avoid infinite CSS animations. If you need one, use `steps(n)` so it repaints a few times a
+  second, not 60.
+- Avoid `backdrop-filter` and `filter: blur()` on elements that move.
+
 ## 6. Debugging
 
 - Developing in a normal browser: run `widgetctl url` and open the printed URL in
   Chrome/Firefox. You get the same shell and widgets, with full devtools.
 - `widgetctl devtools` opens the WebKit inspector in the real desktop window.
 - Log file: `~/.local/share/widgetsystem/widgetsystem.log` (contains `ctx.log` output,
-  uncaught errors and mount failures). `tail -f` it.
+  uncaught errors and mount failures). `widgetctl log -n 100` prints it and returns.
+  `widgetctl log -f` follows it.
 - `widgetctl snapshot out.png` renders the real widget layer to a PNG, so you can check
   visuals even when windows cover the desktop.
 - `widgetctl add <widget-id>`, `widgetctl list`, `widgetctl reload`, `widgetctl edit`

@@ -435,10 +435,13 @@ function makeCtx(inst) {
     on,
     every: (ms, fn) => { const t = setInterval(fn, ms); return track(() => clearInterval(t)); },
     after: (ms, fn) => { const t = setTimeout(fn, ms); return track(() => clearTimeout(t)); },
-    raf(fn) {
+    raf(fn, { fps = 60 } = {}) {
+      // Every changed frame recomposites the whole full-screen layer, so let widgets cap it.
       let id, last = performance.now(), alive = true;
+      const minStep = 1000 / fps - 2;
       const loop = (t) => {
         if (!alive) return;
+        if (t - last < minStep) { id = requestAnimationFrame(loop); return; }
         const dt = Math.min(0.1, (t - last) / 1000);
         last = t;
         if (!S.hidden) { try { fn(dt, t); } catch (e) { reportError(inst, e); alive = false; return; } }
@@ -519,8 +522,10 @@ function say(inst, text, opts = {}) {
     else if (anchor && 'x' in anchor) { x = anchor.x; y = anchor.y; }
     else { const r = inst.el.getBoundingClientRect(); x = r.left + r.width / 2; y = r.top - 10; }
     const bw = el.offsetWidth / 2 + 6;
-    el.style.left = clamp(x, bw, innerWidth - bw) + 'px';
-    el.style.top = Math.max(el.offsetHeight + 6, y) + 'px';
+    const left = Math.round(clamp(x, bw, innerWidth - bw)) + 'px';
+    const top = Math.round(Math.max(el.offsetHeight + 6, y)) + 'px';
+    if (el.style.left !== left) el.style.left = left; // unchanged writes still cost a repaint
+    if (el.style.top !== top) el.style.top = top;
     if (opts.typing && shown < full.length) { shown += 0.6; el.textContent = full.slice(0, Math.ceil(shown)); }
     requestAnimationFrame(place);
   };

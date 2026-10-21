@@ -96,7 +96,7 @@ export function mount(ctx) {
     }
   }
 
-  let blinkT = 3;
+  let blinkT = 3, lastTf = '';
   ctx.raf((dt) => {
     if (!pet.dragged) {
       if (!pet.ground) {
@@ -125,9 +125,11 @@ export function mount(ctx) {
     }
     const walking = pet.ground && pet.target != null;
     const bob = walking ? Math.abs(Math.sin(performance.now() / 110)) * -4 : 0;
-    el.style.transform = `translate(${pet.x}px, ${pet.y + bob}px) scaleX(${pet.dir})`;
-    if ((blinkT -= dt) < 0) { el.classList.add('blink'); ctx.after(130, () => el.classList.remove('blink')); blinkT = 2 + Math.random() * 4; }
-  });
+    // Only touch the DOM when something moved: any change repaints the whole layer.
+    const tf = `translate(${pet.x.toFixed(1)}px, ${(pet.y + bob).toFixed(1)}px) scaleX(${pet.dir})`;
+    if (tf !== lastTf) { el.style.transform = tf; lastTf = tf; }
+    if ((blinkT -= dt) < 0 && !pet.sleeping) { el.classList.add('blink'); ctx.after(130, () => el.classList.remove('blink')); blinkT = 2 + Math.random() * 4; }
+  }, { fps: 40 });
 
   // ---------- interaction: click = pet, drag = carry, double click = jump
   let down = null;

@@ -27,6 +27,6 @@
 .mouth { position: absolute; left: 50%; top: 58%; width: 8px; height: 4px; margin-left: -4px; border: 2px solid #1b1d24; border-top: 0; border-radius: 0 0 8px 8px; }
 .pet.sad .mouth { border-top: 2px solid #1b1d24; border-bottom: 0; border-radius: 8px 8px 0 0; top: 62%; }
 .shadow { position: absolute; left: 10%; right: 10%; bottom: -4px; height: 6px; border-radius: 50%; background: rgba(0,0,0,.22); filter: blur(2px); }
-.zzz { position: absolute; right: -10px; top: -14px; font: 600 13px var(--ws-font); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); display: none; animation: z 2s infinite; }
+.zzz { position: absolute; right: -10px; top: -14px; font: 600 13px var(--ws-font); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); display: none; animation: z 2s steps(4) infinite; }  /* stepped: 2 repaints/s instead of 60 */
 .pet.sleep .zzz { display: block; }
-@keyframes z { 0% { opacity: 0; transform: translate(0,4px); } 50% { opacity: 1; } 100% { opacity: 0; transform: translate(8px,-10px); } }
+@keyframes z { 0% { opacity: .2; transform: translate(0,4px); } 50% { opacity: 1; transform: translate(4px,-3px); } 100% { opacity: .2; transform: translate(8px,-10px); } }

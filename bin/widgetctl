@@ -15,7 +15,7 @@
   widgetctl snapshot [file.png]   render the widget layer to a PNG
   widgetctl path add|remove <dir> register a folder that contains widgets
   widgetctl url                   print the dev URL (open in a normal browser)
-  widgetctl log                   follow the log file
+  widgetctl log [-n N] [-f]       print the last N log lines (default 50); -f follows
 """
 import json
 import os
@@ -62,7 +62,8 @@ def main(argv):
         i = info()
         print(f"http://127.0.0.1:{i['port']}/?token={i['token']}")
     elif cmd == "log":
-        os.execvp("tail", ["tail", "-n", "50", "-f", str(LOG)])
+        n = rest[rest.index("-n") + 1] if "-n" in rest else "50"
+        os.execvp("tail", ["tail", "-n", n, *(["-f"] if "-f" in rest else []), str(LOG)])
     elif cmd == "list":
         r = call("ctl.list")
         print("Widgets:")
