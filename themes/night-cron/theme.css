@@ -106,8 +106,9 @@
 [data-ws-theme="night-cron"] .ws-field input[type=text],
 [data-ws-theme="night-cron"] .ws-field input[type=number],
 [data-ws-theme="night-cron"] .ws-field select { border-radius: 0; color: var(--ws-cyan); }
+[data-ws-theme="night-cron"] .ws-tip { border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
 [data-ws-theme="night-cron"] .ws-launcher {
-  border-radius: 0; color: var(--ws-red); background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ws-edge);
+  border-radius: 0; letter-spacing: .14em; color: var(--ws-red); background: var(--ws-panel); box-shadow: inset 0 0 0 1px var(--ws-edge);
   clip-path: polygon(0 0, calc(100% - 7px) 0, 100% 7px, 100% 100%, 0 100%);
 }
 [data-ws-theme="night-cron"] .ws-exit-pill {

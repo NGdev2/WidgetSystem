@@ -208,11 +208,20 @@ body.ws-edit .ws-resize { opacity: 1; z-index: 6; }
 .ws-exit-pill:hover { opacity: 1; }
 .ws-exit-pill kbd { font: 10px var(--ws-font-mono, monospace); padding: 1px 5px; border: 1px solid var(--ws-border); border-radius: 4px; }
 .ws-launcher {
-  position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
+  position: absolute; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; border: 0; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; font: 600 12px var(--ws-font); letter-spacing: .06em; text-transform: uppercase;
   background: var(--ws-panel); color: var(--ws-fg); box-shadow: 0 2px 10px rgba(0, 0, 0, .25);
-  opacity: .35; transition: opacity .2s, transform .2s; font-size: 15px;
+  opacity: .8; transition: opacity .2s, transform .2s;
 }
-.ws-launcher:hover { opacity: 1; transform: scale(1.1); }
+.ws-launcher:hover { opacity: 1; transform: translateY(-1px); }
+.ws-tip {
+  position: absolute; max-width: 280px; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
+  font: 500 13px var(--ws-font); color: var(--ws-fg-strong); background: var(--ws-panel); border: 1px solid var(--ws-edge);
+  border-radius: var(--ws-radius-sm); box-shadow: var(--ws-shadow); animation: ws-pop .3s;
+}
+.ws-tip .ws-btn2 { align-self: flex-end; }
+.ws-dialog .ws-field b { font-weight: 700; white-space: nowrap; }
+.ws-dialog .ws-field span { color: var(--ws-fg-muted); text-align: right; }
 
 /* ---------- speech bubbles ---------- */
 .ws-bubble {

@@ -134,10 +134,38 @@ export function toolbar(show, { onAdd, onDone } = {}) {
   layer().append(toolbarEl);
 }
 
+/** A small dismissible hint pinned near an element (first-run guidance). */
+export function tip(anchor, text, onDone) {
+  const r = anchor.getBoundingClientRect();
+  const el = h('div', { class: 'ws-tip' }, h('div', {}, text), h('button', { class: 'ws-btn2 primary', onclick: () => { el.remove(); onDone?.(); } }, 'Got it'));
+  layer().append(el);
+  const t = el.getBoundingClientRect();
+  el.style.left = Math.max(8, Math.min(r.right - t.width, innerWidth - t.width - 8)) + 'px';
+  el.style.top = Math.max(8, r.top - t.height - 12) + 'px';
+  return el;
+}
+
+export function helpDialog() {
+  const rows = [
+    ['✦ Widgets (bottom right)', 'add widgets, the Navigator, edit layout, themes, hide all'],
+    ['Right-click a widget', 'its menu: settings, look, expand, remove'],
+    ['Drag any empty spot', 'move a widget (or Ctrl+drag anywhere on it)'],
+    ['Bottom-right corner', 'resize'],
+    ['Esc', 'leave full screen or edit mode'],
+    ['Terminal', 'widgetctl --help (add, theme, install, send …)'],
+  ];
+  const el = h('div', { class: 'ws-dialog' }, h('h3', {}, 'Help & shortcuts'),
+    ...rows.map(([k, v]) => h('div', { class: 'ws-field' }, h('b', {}, k), h('span', {}, v))),
+    h('div', { class: 'actions' }, h('button', { class: 'ws-btn2 primary', onclick: closeModal }, 'Close')));
+  const wrap = h('div', { class: 'ws-dialog-wrap' }, el);
+  wrap.addEventListener('pointerdown', (e) => { if (e.target === wrap) closeModal(); });
+  return openModal(wrap, { catcher: false });
+}
+
 export function launcher(corner, onClick) {
   const pos = { 'bottom-right': 'right:10px;bottom:10px', 'bottom-left': 'left:10px;bottom:10px',
     'top-right': 'right:10px;top:10px', 'top-left': 'left:10px;top:10px' }[corner] || 'right:10px;bottom:10px';
-  const el = h('button', { class: 'ws-launcher', style: pos, title: 'Widgets' }, '✦');
+  const el = h('button', { class: 'ws-launcher', style: pos, title: 'Widgets: add, edit, themes, Navigator, help' }, '✦', h('span', {}, 'Widgets'));
   el.addEventListener('click', (e) => onClick(e, el));
   layer().append(el);
   return el;

@@ -780,6 +780,7 @@ function launcherMenu(e, el) {
     { kind: 'label', label: 'Theme' },
     { kind: 'seg', value: S.themePack.id, onChange: (id) => call('theme.set', { id }),
       options: S.themes.map((t) => ({ label: t.name, value: t.id })) },
+    { icon: '?', label: 'Help & shortcuts', action: () => { ui.helpDialog(); scheduleRegion(); } },
     { icon: '↻', label: 'Reload all', action: () => location.reload() },
   ]);
   scheduleRegion();
@@ -1031,7 +1032,13 @@ async function boot() {
   S.themes = st.themes || [];
   await applyThemePack(S.config.theme || 'night-cron');
   await applyTheme(st.theme);
-  if (S.config.launcher !== false) ui.launcher(S.config.launcherCorner, launcherMenu);
+  if (S.config.launcher !== false) {
+    const btn = ui.launcher(S.config.launcherCorner, launcherMenu);
+    // First run: point at the menu once (remembered per browser profile; harmless if storage is blocked).
+    let seen = false;
+    try { seen = localStorage.getItem('ws-tip-launcher') === '1'; } catch { /* storage unavailable */ }
+    if (!seen) setTimeout(() => { ui.tip(btn, 'Your widgets menu lives here: add widgets, the Navigator, themes, edit layout and help. Right-click any widget for its own menu.', () => { try { localStorage.setItem('ws-tip-launcher', '1'); } catch { /* ignore */ } scheduleRegion(); }); scheduleRegion(); }, 1500);
+  }
 
   let cfgs = st.layout?.instances;
   if (!cfgs) {
