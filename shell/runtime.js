@@ -5,12 +5,16 @@ import { Particles } from './lib/particles.js';
 import { blurredWallpaper } from './lib/glass.js';
 import * as ui from './lib/ui.js';
 import { micro } from './lib/micro.js';
+import { createTickets } from './lib/sheet.js';
 
 const $ = (s) => document.querySelector(s);
 const desk = $('#ws-desk');
-const overlayLayer = $('#ws-overlay');
+const overlayLayer = $('#ws-overlay');            // back layer (behind an expanded widget)
+const overlayFront = $('#ws-overlay-front');      // front layer
 const bubbleLayer = $('#ws-bubbles');
+const bubbleBack = $('#ws-bubbles-back');
 const particles = new Particles($('#ws-particles'));
+const particlesBack = new Particles($('#ws-particles-back'));
 
 const S = {
   widgets: new Map(),     // widget id -> manifest
@@ -79,6 +83,7 @@ const snapshot = () => [...S.instances.values()].map((i) => ({
   id: i.id, widget: i.manifest.id, rect: i.rect(), expanded: !!i.cfg.expanded,
 }));
 function broadcast(name, payload) { for (const i of S.instances.values()) i.emit(name, payload); }
+const tickets = createTickets({ S, broadcast: (n, p) => broadcast(n, p), rimsEl: document.getElementById('ws-rims') });
 
 // ---------------------------------------------------------------- geometry helpers
 function geometry() {
@@ -120,6 +125,10 @@ class Instance {
     this.menuItems = [];
     this.interactive = new Set();
     this.captured = new Set();
+    this.overlayHosts = {};     // layer -> {host, root}
+    this.actors = new Set();
+    this.bubbles = new Map();   // channel -> bubble handle
+    this.protect = [];
     this.build();
   }
 
@@ -215,11 +224,12 @@ class Instance {
   // Swap the theme kit in this widget's shadow roots and tell its CSS which theme is active.
   applyThemeKit() {
     const href = themeKitHref() || 'data:text/css,';
-    for (const sh of [this.shadow, this.overlayHost?.shadowRoot]) {
+    const hosts = Object.values(this.overlayHosts);
+    for (const sh of [this.shadow, ...hosts.map((o) => o.host.shadowRoot)]) {
       const link = sh?.querySelector('link[data-theme-kit]');
       if (link && link.getAttribute('href') !== href) link.setAttribute('href', href);
     }
-    for (const r of [this.root, this.overlayRoot]) if (r) r.dataset.theme = S.themePack.id;
+    for (const r of [this.root, ...hosts.map((o) => o.root)]) if (r) r.dataset.theme = S.themePack.id;
   }
 
   applyGlass() {
@@ -257,6 +267,9 @@ class Instance {
     this.menuItems = [];
     this.interactive = new Set();
     this.captured = new Set();
+    this.actors = new Set();
+    this.protect = [];
+    this.tearable = true;
     this.mounted = true;
 
     const ro = new ResizeObserver(([e]) => this.emit('resize', { w: e.contentRect.width, h: e.contentRect.height }));
@@ -283,9 +296,11 @@ class Instance {
     try { this.unmountFn?.(this.ctx); } catch (e) { reportError(this, e); }
     for (const d of this.disposers.reverse()) { try { d(); } catch (e) { reportError(this, e); } }
     this.disposers = [];
-    this.overlayHost?.remove();
-    this.overlayHost = null;
-    this.bubble?.close();
+    for (const o of Object.values(this.overlayHosts)) o.host.remove();
+    this.overlayHosts = {};
+    this.actors.clear();
+    for (const b of [...this.bubbles.values()]) b.close();
+    tickets.instanceGone(this);
     updatePointerTracking();
   }
 
@@ -341,6 +356,7 @@ class Instance {
     this.applyRect();
     setTimeout(() => this.el.classList.remove('ws-animate'), 400);
     this.emit(on ? 'expand' : 'collapse');
+    tickets.sheetChanged(this, on);
     updateExitPill();
     saveLayout();
   }
@@ -425,31 +441,52 @@ function makeCtx(inst) {
   };
   const hostCall = (method, params = {}) => call(method, { widget: m.id, ...params });
 
+  // One overlay host per layer: 'back' sits behind an expanded widget, 'front' above it.
+  const rootFor = (layer = 'back') => {
+    layer = layer === 'front' ? 'front' : 'back';
+    if (!inst.overlayHosts[layer]) {
+      const host = document.createElement('div');
+      host.style.cssText = 'position:fixed;inset:0;pointer-events:none';
+      host.dataset.owner = inst.id;
+      host.dataset.layer = layer;
+      const sh = host.attachShadow({ mode: 'open' });
+      const root = document.createElement('div');
+      root.className = 'ws-root';
+      root.dataset.theme = S.themePack.id;
+      root.style.cssText = 'position:absolute;inset:0;pointer-events:none';
+      sh.append(...styleLinks(m), root);
+      (layer === 'front' ? overlayFront : overlayLayer).append(host);
+      inst.overlayHosts[layer] = { host, root };
+    }
+    return inst.overlayHosts[layer].root;
+  };
   const overlay = {
-    get root() {
-      if (!inst.overlayHost) {
-        const host = document.createElement('div');
-        host.style.cssText = 'position:fixed;inset:0;pointer-events:none';
-        host.dataset.owner = inst.id;
-        const sh = host.attachShadow({ mode: 'open' });
-        const root = document.createElement('div');
-        root.className = 'ws-root';
-        root.dataset.theme = S.themePack.id;
-        root.style.cssText = 'position:absolute;inset:0;pointer-events:none';
-        sh.append(...styleLinks(m), root);
-        overlayLayer.append(host);
-        inst.overlayHost = host;
-        inst.overlayRoot = root;
-      }
-      return inst.overlayRoot;
-    },
-    create({ interactive = false, className = '', html = '' } = {}) {
+    get root() { return rootFor('back'); },
+    rootFor,
+    create({ interactive = false, className = '', html = '', layer = 'back', actor = null } = {}) {
       const el = document.createElement('div');
       el.className = className;
       el.style.cssText = `position:absolute;left:0;top:0;pointer-events:${interactive ? 'auto' : 'none'}`;
       el.innerHTML = html;
-      overlay.root.append(el);
+      el.dataset.layer = layer === 'front' ? 'front' : 'back';
+      rootFor(el.dataset.layer).append(el);
       if (interactive) inst.interactive.add(el);
+      el.setLayer = (l) => {
+        l = l === 'front' ? 'front' : 'back';
+        if (el.dataset.layer === l) return;
+        el.dataset.layer = l;
+        rootFor(l).append(el);
+      };
+      if (actor) {
+        // Actors are characters other widgets can see through ctx.desktop.actors().
+        el.dataset.actor = `${inst.id}:${actor.name || actor.role || 'actor'}:${inst.actors.size}`;
+        el.actor = { role: actor.role || 'npc', name: actor.name || '', kind: actor.kind || '', state: actor.state || 'idle' };
+        inst.actors.add(el);
+        el.setActorState = (s = {}) => {
+          if (s.layer) el.setLayer(s.layer);
+          for (const k of ['state', 'name', 'kind']) if (k in s) el.actor[k] = s[k];
+        };
+      }
       el.setInteractive = (on) => {
         el.style.pointerEvents = on ? 'auto' : 'none';
         if (on) inst.interactive.add(el); else inst.interactive.delete(el);
@@ -489,6 +526,8 @@ function makeCtx(inst) {
       toggleExpand: () => inst.toggleExpand(),
       isExpanded: () => !!inst.cfg.expanded,
       close: () => inst.close(),
+      setTearable: (on) => { inst.tearable = !!on; },
+      protect: (rects) => { inst.protect = (rects || []).map((r) => ({ x: +r.x || 0, y: +r.y || 0, w: +r.w || 0, h: +r.h || 0 })); },
     },
     menu: {
       add(item) {
@@ -524,13 +563,26 @@ function makeCtx(inst) {
     particles: {
       burst(opts = {}) {
         const r = inst.el.getBoundingClientRect();
-        particles.burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, ...opts });
+        (opts.layer === 'back' ? particlesBack : particles).burst({ x: r.left + r.width / 2, y: r.top + r.height / 2, ...opts });
       },
     },
     overlay,
     toWindow(x, y) { const r = inst.contentEl.getBoundingClientRect(); return { x: r.left + x, y: r.top + y }; },
     fromWindow(x, y) { const r = inst.contentEl.getBoundingClientRect(); return { x: x - r.left, y: y - r.top }; },
-    desktop: { size: () => ({ w: innerWidth, h: innerHeight }), widgets: snapshot },
+    desktop: {
+      size: () => ({ w: innerWidth, h: innerHeight }),
+      widgets: snapshot,
+      sheet: () => tickets.sheetInfo(),
+      actors: actorsList,
+      tickets: {
+        file: (spec) => tickets.file(inst, spec),
+        update: (id, patch) => tickets.update(inst, id, patch),
+        claim: (id) => tickets.claim(inst, id),
+        progress: (id, p) => tickets.progress(inst, id, p),
+        resolve: (id, info) => tickets.resolve(inst, id, info),
+        list: (filter) => tickets.list(filter),
+      },
+    },
     pointer: () => ({ ...S.pointer }),
     send: (target, data) => deliver({ id: inst.id, widget: m.id }, target, data),
     host: {
@@ -566,7 +618,22 @@ function setPointer(x, y) {
   if (S.pointerTracking) broadcast('pointer', { x, y });
 }
 window.__wsPointer = setPointer; // called by the desktop host (~30 Hz, works outside the input region)
-addEventListener('pointermove', (e) => setPointer(e.clientX, e.clientY), true);
+addEventListener('pointermove', (e) => { setPointer(e.clientX, e.clientY); tickets.notePointer(e.clientX, e.clientY, false); }, true);
+addEventListener('pointerdown', (e) => tickets.notePointer(e.clientX, e.clientY, true), true);
+addEventListener('keydown', () => tickets.noteKey(), true);
+
+function actorsList() {
+  const out = [];
+  for (const i of S.instances.values()) {
+    for (const el of i.actors) {
+      if (!el.isConnected) continue;
+      const r = el.getBoundingClientRect();
+      out.push({ id: el.dataset.actor, instance: i.id, widget: i.manifest.id, ...el.actor, layer: el.dataset.layer,
+        rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } });
+    }
+  }
+  return out;
+}
 
 function focusInstance(inst) { S.focused = inst?.id ?? null; }
 
@@ -590,12 +657,18 @@ for (const type of ['keydown', 'keyup']) {
 
 // ---------------------------------------------------------------- speech bubbles
 function say(inst, text, opts = {}) {
-  inst.bubble?.close();
+  // Up to 3 bubbles per widget at once, one per channel (e.g. the stickman and an app talking).
+  const channel = String(opts.channel || 'main');
+  inst.bubbles.get(channel)?.close();
+  if (inst.bubbles.size >= 3) [...inst.bubbles.values()][0].close();
+  const anchor = opts.anchor;
+  // A bubble lives in its speaker's layer, so a creature hidden behind a sheet can't talk over it.
+  const layer = opts.layer || (anchor instanceof Element
+    ? anchor.closest?.('[data-layer]')?.dataset.layer || anchor.getRootNode().host?.dataset.layer : null) || 'front';
   const el = document.createElement('div');
   el.className = 'ws-bubble';
-  bubbleLayer.append(el);
+  (layer === 'back' ? bubbleBack : bubbleLayer).append(el);
   let alive = true, full = String(text), shown = opts.typing ? 0 : full.length;
-  const anchor = opts.anchor;
   const place = () => {
     if (!alive) return;
     let x, y;
@@ -619,12 +692,12 @@ function say(inst, text, opts = {}) {
       alive = false;
       el.classList.add('out');
       setTimeout(() => el.remove(), 260);
-      if (inst.bubble === handle) inst.bubble = null;
+      if (inst.bubbles.get(channel) === handle) inst.bubbles.delete(channel);
     },
   };
   const duration = opts.duration ?? 2200 + 55 * full.length;
   if (duration > 0) setTimeout(handle.close, duration);
-  inst.bubble = handle;
+  inst.bubbles.set(channel, handle);
   return handle;
 }
 
@@ -666,6 +739,10 @@ function launcherMenu(e, el) {
     { icon: '＋', label: 'Add widget…', action: openGallery },
     { icon: '✎', label: S.edit ? 'Finish editing' : 'Edit widgets', action: () => setEdit(!S.edit) },
     { icon: S.hidden ? '◉' : '◌', label: S.hidden ? 'Show widgets' : 'Hide widgets', action: toggleHidden },
+    { icon: S.config.tears !== false ? '☑' : '☐', label: 'Characters may tear full-screen widgets', action: () => {
+      S.config.tears = S.config.tears === false;
+      call('config.set', { key: 'tears', value: S.config.tears });
+    } },
     { kind: 'label', label: 'Theme' },
     { kind: 'seg', value: S.themePack.id, onChange: (id) => call('theme.set', { id }),
       options: S.themes.map((t) => ({ label: t.name, value: t.id })) },

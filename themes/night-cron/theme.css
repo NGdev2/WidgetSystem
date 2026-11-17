@@ -31,6 +31,8 @@
   --ws-radius-sm: 0px;
   --ws-cut: 14px;
   --ws-cut-sm: 8px;
+  --ws-rim: #ff5d55;                         /* torn-paper rim + its cyan fiber */
+  --ws-rim-inner: #5ef6ff;
   --ws-skew: -24deg;                         /* progress segments lean like the game's stat bars */
   --ws-decor: inline-block;                  /* barcodes and other decorations are visible */
   color-scheme: dark;

@@ -227,6 +227,57 @@ looks right in every theme.
 | `ctx.desktop.size()` | `{w, h}` of the widget layer |
 | `ctx.desktop.widgets()` | `[{id, widget, rect:{x,y,w,h}, expanded}]` for standing on or avoiding other widgets |
 
+### Layers, sheets, tickets & actors (API v2)
+**Layers.** Overlay elements live in one of two layers:
+- `back` (the default): behind an expanded widget
+- `front`: above it
+
+With no widget expanded, both look the same. When a widget expands, it becomes the **sheet**: it
+covers the back layer, so creatures standing "on the desktop" are hidden behind it instead of
+floating on top.
+
+| member | |
+|---|---|
+| `ctx.overlay.create({layer, interactive, actor})` | `layer: 'back' \| 'front'`. Pass `actor: {role, name, kind}` to make the element visible to other widgets as a character |
+| `el.setLayer('back' \| 'front')` | move an overlay element between layers, e.g. after climbing through a hole |
+| `el.setActorState({state, layer})` | update what other widgets see about this actor |
+| `ctx.overlay.rootFor(layer)` | the overlay root of a layer |
+| `ctx.say(text, {anchor, channel, layer})` | bubbles follow the anchor's layer. Up to 3 `channel`s per widget can talk at once |
+| `ctx.particles.burst({layer})` | default `'front'` |
+| `ctx.desktop.sheet()` | `null` or `{id, widget, rect, tearable, protect:[rects], maxTears, tears:[ticket]}` |
+| `ctx.desktop.actors()` | `[{id, instance, widget, role, name, kind, state, layer, rect}]` |
+| `ctx.frame.setTearable(bool)` / `ctx.frame.protect([{x,y,w,h}])` | for widgets that expand: opt out of tears, or protect areas (content coordinates), e.g. your controls |
+
+**Tickets** are small work orders. Any widget files them, and any widget can fix them.
+- Kinds: `tear`, `crack`, `orphan`, `error`, `overdue`, `hung`, `care`.
+- A `tear` is a ticket with a polygon: the host cuts it out of the sheet, so the back layer shows
+  through (clicks in the hole reach the back layer too), and draws its rim. You draw any flaps
+  yourself in the front layer.
+
+| member | |
+|---|---|
+| `ctx.desktop.tickets.file({kind, x, y, r, sev, label, layer, ttl, points})` | returns the ticket, or `{rejected: 'disabled' \| 'busy' \| 'protected' \| 'cap'}` |
+| `.update(id, {points, label, sev, busy, x, y})` | filer only. For tears, `points` grows the hole (max 4 updates/s). Set `busy: true` while something is inside the hole |
+| `.claim(id)` | take the job. Released after 20 s without progress, or on unmount |
+| `.progress(id, p)` | claimer only. A tear shrinks toward its center; `p = 1` resolves it |
+| `.resolve(id, {x, y, exit})` | claimer or filer. The fixer's position helps the filer animate |
+| `.list({kind})` | the open tickets |
+| event `ticket` | `{type: 'open' \| 'update' \| 'claim' \| 'release' \| 'progress' \| 'resolve' \| 'expire' \| 'reject', ticket}` |
+| event `sheet` | `sheet() \| null` whenever a widget expands or collapses |
+
+Each tear ticket also has `ledge: {x, y, w}`, the bottom edge of the hole, a place creatures can sit.
+
+**Tear rules (enforced by the host).** A tear is rejected:
+- within 5 s of the sheet opening
+- with the pointer within 160 px, or within 3 s of a keystroke
+- while an input in the sheet has focus
+- when it overlaps a protected zone (the top 56 px, the bottom corners, and declared rects)
+- beyond the caps: 3 tears per sheet, 240×300 px and 45k px² each, 8% of the sheet in total, 48 points
+
+Every tear expires after 90 s, and the host mends it in three steps. Hovering a hole for
+1.2 s, or clicking it, makes it urgent: it heals within about 2.5 s unless someone repairs it.
+Collapsing the sheet clears all tears. Users can switch tears off in the ✦ menu.
+
 ### Messaging
 - `ctx.send(target, data)` sends to a target that is an instance id, a widget id (all its
   instances), or `"*"`.

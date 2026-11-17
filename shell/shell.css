@@ -40,17 +40,26 @@ body { font-family: var(--ws-font); color: var(--ws-fg); -webkit-font-smoothing:
 /* In a normal browser (dev mode) show the wallpaper so it looks like the desktop. */
 body.ws-browser { background: #3b4252 var(--ws-wallpaper, none) center / cover no-repeat; }
 
-#ws-desk, #ws-overlay, #ws-bubbles, #ws-ui { position: fixed; inset: 0; pointer-events: none; }
-#ws-particles { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-#ws-overlay { z-index: 3; }
-#ws-bubbles { z-index: 6; }
+/* #ws-desk is absolute without z-index: no stacking context, so frames take part in the page-level
+   order below and an expanded frame (z 4) can cover the back creature layer (z 3). */
+#ws-desk { position: absolute; inset: 0; pointer-events: none; }
+#ws-overlay, #ws-overlay-front, #ws-bubbles, #ws-bubbles-back, #ws-rims, #ws-ui { position: fixed; inset: 0; pointer-events: none; }
+#ws-particles, #ws-particles-back { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#ws-overlay, #ws-particles-back, #ws-bubbles-back { z-index: 3; }
+#ws-rims { z-index: 5; }
+#ws-overlay-front { z-index: 6; }
+#ws-particles { z-index: 7; }
+#ws-bubbles { z-index: 8; }
 #ws-ui { z-index: 10; }
-#ws-overlay > *, #ws-ui > * { pointer-events: auto; }
-body.ws-hidden #ws-desk, body.ws-hidden #ws-overlay, body.ws-hidden #ws-bubbles { opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
+#ws-ui > * { pointer-events: auto; }
+body.ws-hidden :is(#ws-desk, #ws-overlay, #ws-overlay-front, #ws-bubbles, #ws-bubbles-back, #ws-rims) { opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
+#ws-rims svg { position: absolute; inset: 0; overflow: visible; }
+.ws-rim-outer { fill: none; stroke: var(--ws-rim, rgba(245, 247, 250, .95)); stroke-width: 3; stroke-linejoin: round; }
+.ws-rim-inner { fill: none; stroke: var(--ws-rim-inner, rgba(0, 0, 0, .3)); stroke-width: 1; stroke-linejoin: round; }
 
 /* ---------- frame ---------- */
 .ws-frame {
-  position: absolute; pointer-events: auto; border-radius: var(--r, 18px);
+  position: absolute; z-index: 1; pointer-events: auto; border-radius: var(--r, 18px);
   transition: box-shadow .2s, opacity .3s, transform .3s;
   animation: ws-pop .35s cubic-bezier(.2, 1.2, .4, 1);
 }
@@ -58,7 +67,7 @@ body.ws-hidden #ws-desk, body.ws-hidden #ws-overlay, body.ws-hidden #ws-bubbles 
 .ws-frame.ws-closing { opacity: 0; transform: scale(.9); }
 @keyframes ws-pop { from { opacity: 0; transform: scale(.94); } }
 .ws-frame[data-shadow="true"] { box-shadow: var(--ws-shadow); }
-.ws-frame.ws-expanded { z-index: 2; }
+.ws-frame.ws-expanded { z-index: 4; }
 
 .ws-bg { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
 .ws-bg-img { position: absolute; background-size: cover; background-position: center; display: none; }
@@ -127,7 +136,7 @@ body.ws-edit .ws-resize { opacity: 1; z-index: 6; }
   background: #ff5f57; color: #fff; font-size: 15px; line-height: 24px; padding: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
 }
 .ws-editcover .ws-edit-name { position: absolute; left: 50%; bottom: -26px; transform: translateX(-50%); font-size: 12px; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); white-space: nowrap; }
-.ws-frame.ws-dragging { opacity: .92; z-index: 3; }
+.ws-frame.ws-dragging { opacity: .92; z-index: 2; }
 
 .ws-toolbar {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center;
