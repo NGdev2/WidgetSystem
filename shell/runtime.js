@@ -313,6 +313,7 @@ class Instance {
 
   showError(e) {
     reportError(this, e);
+    fileErrorTicket(this, e);
     const box = document.createElement('div');
     box.className = 'ws-error';
     box.textContent = `${this.manifest.name} failed to load:\n${e?.stack || e}`;
@@ -573,6 +574,14 @@ function makeCtx(inst) {
       size: () => ({ w: innerWidth, h: innerHeight }),
       widgets: snapshot,
       sheet: () => tickets.sheetInfo(),
+      // Built-in widgets only (e.g. fsck's "widget doctor"): remount another widget instance.
+      restart: (id) => {
+        if (!m._builtin) throw new Error('ctx.desktop.restart is reserved for built-in widgets');
+        const target = S.instances.get(id);
+        if (!target || target === inst) return false;
+        target.remount();
+        return true;
+      },
       actors: actorsList,
       tickets: {
         file: (spec) => tickets.file(inst, spec),
@@ -864,7 +873,25 @@ function reportError(inst, e) {
   console.error(e);
   log('error', e?.stack || String(e), inst ? `${inst.manifest.id}:${inst.id}` : 'shell');
 }
-addEventListener('error', (e) => log('error', `${e.message} @ ${e.filename}:${e.lineno}`, (e.filename?.match(/\/w\/([^/]+)\//) || [, 'shell'])[1]));
+addEventListener('error', (e) => {
+  const wid = (e.filename?.match(/\/w\/([^/]+)\//) || [, 'shell'])[1];
+  log('error', `${e.message} @ ${e.filename}:${e.lineno}`, wid);
+  const inst = [...S.instances.values()].find((i) => i.manifest.id === wid);
+  if (inst) fileErrorTicket(inst, e.message);
+});
+
+// A widget that crashes files an 'error' ticket (deduped for 10 min) so a repair daemon can react.
+const HOST_FILER = { id: 'host', manifest: { id: 'host' }, shadow: null };
+const errorSeen = new Map();
+function fileErrorTicket(inst, err) {
+  const msg = String(err?.message || err).split('\n')[0];
+  const key = `${inst.id}|${msg}`;
+  if (Date.now() - (errorSeen.get(key) || 0) < 600000) return;
+  errorSeen.set(key, Date.now());
+  const r = inst.rect();
+  tickets.file(HOST_FILER, { kind: 'error', sev: 2, x: r.x + r.w - 20, y: r.y + 10, ttl: 600000,
+    label: `${inst.manifest.id}: ${msg}`.slice(0, 60), target: inst.id });
+}
 addEventListener('unhandledrejection', (e) => log('error', e.reason?.stack || String(e.reason), (String(e.reason?.stack).match(/\/w\/([^/]+)\//) || [, 'shell'])[1]));
 
 // ---------------------------------------------------------------- theme & glass

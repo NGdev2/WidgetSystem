@@ -266,6 +266,9 @@ floating on top.
 | event `sheet` | `sheet() \| null` whenever a widget expands or collapses |
 
 Each tear ticket also has `ledge: {x, y, w}`, the bottom edge of the hole, a place creatures can sit.
+The host files `error` tickets itself when a widget fails to mount or throws (deduped for
+10 min; `target` is the broken instance id). Built-in widgets may call
+`ctx.desktop.restart(instanceId)` to remount another widget.
 
 **Tear rules (enforced by the host).** A tear is rejected:
 - within 5 s of the sheet opening

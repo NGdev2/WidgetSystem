@@ -125,7 +125,7 @@ export function createTickets({ S, broadcast, rimsEl }) {
       sev: [1, 2, 3].includes(spec.sev) ? spec.sev : 1, label: String(spec.label || '').slice(0, 60),
       layer: spec.layer === 'front' ? 'front' : 'back', by: { id: inst.id, widget: inst.manifest.id },
       claimedBy: null, progress: 0, born: now, expiresAt: now + Math.max(20000, +spec.ttl || TTL[kind] || 120000),
-      busy: false, sheet: null, points: null, area: 0,
+      busy: false, sheet: null, points: null, area: 0, target: spec.target ? String(spec.target) : null,
     };
     if (kind === 'tear') {
       const sheet = sheetInst();

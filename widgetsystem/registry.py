@@ -4,6 +4,9 @@ import os
 import re
 from pathlib import Path
 
+from .config import BUILTIN_WIDGETS as _BUILTIN
+
+BUILTIN_DIR = _BUILTIN.resolve()
 SKIP_DIRS = {"node_modules", ".git", "__pycache__", "dist", "build", ".venv"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
@@ -88,6 +91,7 @@ def load_manifest(path: Path):
         })
     m["variants"] = variants
     m["_dir"] = str(wdir)
+    m["_builtin"] = wdir.resolve().is_relative_to(BUILTIN_DIR)
     m["_version"] = _dir_version(wdir)
     return m
 
