@@ -1,9 +1,19 @@
 {
   "id": "sysmon",
   "name": "System",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CPU, memory, battery and network at a glance.",
   "icon": "📊",
-  "size": { "w": 220, "h": 156, "minW": 180, "minH": 130 },
-  "frame": { "look": "glass", "padding": 14 }
+  "size": {
+    "w": 240,
+    "h": 190,
+    "minW": 200,
+    "minH": 160
+  },
+  "frame": {
+    "look": "glass",
+    "padding": 12,
+    "showTitle": true,
+    "title": "System"
+  }
 }

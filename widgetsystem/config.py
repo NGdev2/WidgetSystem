@@ -6,6 +6,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SHELL_DIR = REPO / "shell"
+THEMES_DIR = REPO / "themes"
 BUILTIN_WIDGETS = REPO / "widgets"
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "widgetsystem"
@@ -23,6 +24,8 @@ DEFAULT_CONFIG = {
     "launcher": True,       # small corner button that opens the widget menu
     "launcherCorner": "bottom-right",
     "glassBlur": 28,        # px, strength of the wallpaper blur behind glass widgets
+    "theme": "night-cron",  # a folder in themes/
+    "tears": True,          # characters may tear full-screen widgets
 }
 
 

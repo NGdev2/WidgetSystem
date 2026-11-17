@@ -23,13 +23,16 @@ export function mount(ctx) {
   // ---------- nest UI
   ctx.root.innerHTML = `<div class="nest">
     <div class="top"><span class="name"></span><span class="mood"></span></div>
-    ${[['food', '🍎', '#ff9f43'], ['fun', '🎾', '#4f8cff'], ['energy', '⚡', '#2ecc71']]
-      .map(([k, i, c]) => `<div class="stat" data-k="${k}"><span>${i}</span><div class="bar"><i style="background:${c}"></i></div></div>`).join('')}
+    ${[['food', '🍎'], ['fun', '🎾'], ['energy', '⚡']]
+      .map(([k, i]) => `<div class="stat" data-k="${k}"><span>${i}</span><div class="ws-seg">${'<i></i>'.repeat(10)}</div></div>`).join('')}
     <div class="btns"><button class="ws-btn" data-a="feed" title="Feed">🍎</button><button class="ws-btn" data-a="play" title="Play">🎾</button><button class="ws-btn" data-a="call" title="Call home">🏠</button></div>
   </div>`;
   const renderNest = () => {
     ctx.root.querySelector('.name').textContent = ctx.settings.name;
-    for (const k of ['food', 'fun', 'energy']) ctx.root.querySelector(`[data-k=${k}] i`).style.width = st[k] + '%';
+    for (const k of ['food', 'fun', 'energy']) {
+      const n = Math.round(st[k] / 10), level = st[k] < 25 ? 'hot' : st[k] < 45 ? 'warn' : 'on';
+      ctx.root.querySelectorAll(`[data-k=${k}] .ws-seg i`).forEach((seg, i) => { seg.className = i < n ? level : ''; });
+    }
     ctx.root.querySelector('.mood').textContent = pet.sleeping ? 'sleeping 💤' : mood() > 60 ? 'happy' : mood() > 30 ? 'okay' : 'needs you';
   };
   const mood = () => (st.food + st.fun + st.energy) / 3;

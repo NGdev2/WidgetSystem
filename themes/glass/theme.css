@@ -1,0 +1,19 @@
+/* Glass: the original look. shell.css already holds its light/dark base tokens; this adds the
+   shared tokens newer widgets use, so kit parts and theme-aware widgets render as glass. */
+:root[data-ws-theme="glass"] {
+  --ws-font-mono: ui-monospace, "Ubuntu Mono", monospace;
+  --ws-red: #ff5f57;
+  --ws-cyan: var(--ws-accent);
+  --ws-yellow: #ffbd2e;
+  --ws-ink: #ffffff;
+  --ws-primary: var(--ws-accent);
+  --ws-on-primary: #ffffff;
+  --ws-on-accent: #ffffff;
+  --ws-fg-strong: var(--ws-fg);
+  --ws-panel-bg: var(--ws-tint-plain);
+  --ws-glow: transparent;
+  --ws-scan: none;
+  --ws-radius-sm: 10px;
+  --ws-cut: 0px;
+  --ws-cut-sm: 0px;
+}

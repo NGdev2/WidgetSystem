@@ -1,8 +1,8 @@
-.grid { height: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: center; }
-.m { display: flex; flex-direction: column; gap: 5px; }
-.m .l { white-space: nowrap; gap: 6px; font-size: 11px; color: var(--ws-fg-muted); text-transform: uppercase; letter-spacing: .06em; display: flex; justify-content: space-between; }
-.m .v { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.bar { height: 5px; border-radius: 3px; background: var(--ws-surface); overflow: hidden; }
-.bar i { display: block; height: 100%; border-radius: 3px; background: var(--ws-accent); } /* no transition: animating every update kept the layer repainting */
-.bar i.hot { background: #ff6b6b; }
-.m .l .x { overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
+.sys { height: 100%; display: flex; flex-direction: column; gap: 6px; }
+.grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; align-content: center; }
+.m { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.m .l { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--ws-fg-muted); text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+.m .x { overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0; }
+.m .v { font-size: 19px; font-weight: 650; color: var(--ws-fg-strong); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.m .ws-seg { height: 7px; }
+.ws-root[data-theme="night-cron"] .m .l span:first-child { color: var(--ws-red); font-weight: 700; letter-spacing: .14em; }

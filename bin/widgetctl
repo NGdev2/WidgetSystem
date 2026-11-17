@@ -10,6 +10,7 @@
   widgetctl edit                  toggle edit mode
   widgetctl gallery               open the add-widget gallery
   widgetctl toggle                hide/show all widgets
+  widgetctl theme <id>            switch theme (night-cron, glass)
   widgetctl reload                reload the whole shell
   widgetctl devtools              open the WebKit inspector
   widgetctl snapshot [file.png]   render the widget layer to a PNG
@@ -87,6 +88,8 @@ def main(argv):
         call("ctl.send", {"target": rest[0], "data": data})
     elif cmd == "snapshot":
         print(call("ctl.snapshot", {"path": os.path.abspath(rest[0]) if rest else None}))
+    elif cmd == "theme":
+        print(call("ctl.theme", {"id": rest[0]}))
     elif cmd == "eval":
         print(call("ctl.eval", {"js": rest[0]}))
     elif cmd == "path":

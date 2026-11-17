@@ -176,12 +176,43 @@ elements inside a handle stay clickable), or freely in edit mode.
 - `ctx.raf(fn(dt, t), {fps})` starts an animation loop with `dt` in seconds and returns a stop function. `fps` caps the rate (default 60). It pauses automatically while widgets are hidden
 
 ### Theme
-- `ctx.theme` is `{dark: boolean}` and follows the GNOME light/dark setting.
-- These CSS variables are available inside your shadow root: `--ws-fg`, `--ws-fg-muted`,
-  `--ws-accent`, `--ws-surface` (a subtle fill for inputs and rows), `--ws-border`,
-  `--ws-font`, `--ws-radius`.
-- Optional helper classes (zero specificity, easy to override): `.ws-btn`,
-  `.ws-btn.primary`, `.ws-input`, `.ws-check`, `.ws-muted`, `.ws-big`.
+WidgetSystem ships theme packs in `themes/<id>/`: **Night Cron** (`night-cron`, the default: dark
+maroon panels, red frames, cyan selection, yellow accents, cut corners, Rajdhani) and **Glass**
+(`glass`: frosted cards that follow the system light/dark setting). Users switch in the ✦ menu
+or with `widgetctl theme <id>`. Build your widget on the variables and kit parts below, and it
+looks right in every theme.
+
+- `ctx.theme` is `{name, dark}`. The `theme` event fires when either changes.
+- Your shadow root's `.ws-root` (and your overlay root) carries `data-theme="<id>"`, so CSS
+  can add theme touches: `.ws-root[data-theme="night-cron"] .time { … }`.
+- **Variables:**
+
+  | group | variables |
+  |---|---|
+  | text | `--ws-fg`, `--ws-fg-strong`, `--ws-fg-muted` |
+  | colors | `--ws-primary` + `--ws-on-primary` (headers, buttons), `--ws-accent` + `--ws-on-accent` (selection, progress), `--ws-red`, `--ws-cyan`, `--ws-yellow`, `--ws-ink` (dark text on bright slabs) |
+  | surfaces | `--ws-surface`, `--ws-surface-hover`, `--ws-border`, `--ws-edge`, `--ws-panel` (menus), `--ws-panel-bg` (your own panels) |
+  | shape | `--ws-radius`, `--ws-radius-sm`, `--ws-cut` (chamfer size; 0 in Glass), `--ws-cut-sm`, `--ws-skew` (progress lean) |
+  | effects | `--ws-glow`, `--ws-scan` (scanline background or `none`), `--ws-decor` (`display` value for decorations: `none` in Glass) |
+  | fonts | `--ws-font`, `--ws-font-mono` |
+
+- **Kit classes** (zero specificity, easy to override; themes restyle them):
+
+  | class | what it is |
+  |---|---|
+  | `.ws-btn`, `.ws-btn.primary`, `.ws-input`, `.ws-check`, `.ws-muted`, `.ws-big` | basics |
+  | `.ws-bar` | header strip |
+  | `.ws-sel` | `<div class="ws-sel"><button>◁</button><output>…</output><button>▷</button></div>` selector |
+  | `.ws-toggle` (+ `.on`) | `<button class="ws-toggle on">On<i></i></button>` switch |
+  | `.ws-diamond` (+ `.on`) | check marker |
+  | `.ws-tag`, `.ws-tag.accent`, `.ws-tag.warn` | small labels |
+  | `.ws-seg` | segmented progress: `<div class="ws-seg"><i class="on"></i>…</div>`; segments can be `on` / `warn` / `hot` |
+  | `.ws-micro` | footer line: `<div class="ws-micro"><i class="bars"></i><span class="grow"></span></div>` |
+  | `.ws-banner` | celebration band |
+
+- `ctx.ui.micro(dateKey?)` returns `{text, title}` for the daily footer line: the day of the year
+  plus an "on this day in computing" fact, or a programmer saying on days without one.
+  `dateKey` defaults to today.
 
 ### Desktop-level effects (they can leave your box)
 | member | |

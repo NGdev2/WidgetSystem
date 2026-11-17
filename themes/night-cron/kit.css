@@ -1,0 +1,14 @@
+/* Night Cron shapes for the shared kit, injected into every widget shadow root after shell/kit.css. */
+:where(.ws-root) { letter-spacing: .02em; }
+:where(.ws-btn) {
+  border: 0; border-radius: 0; box-shadow: inset 0 0 0 1px var(--ws-edge); color: var(--ws-red);
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%);
+}
+:where(.ws-btn:hover) { background: var(--ws-red); color: var(--ws-ink); }
+:where(.ws-btn.primary) { background: var(--ws-cyan); color: var(--ws-ink); box-shadow: none; }
+:where(.ws-input) { border-radius: 0; color: var(--ws-cyan); caret-color: var(--ws-cyan); }
+:where(.ws-input::placeholder) { text-transform: uppercase; letter-spacing: .12em; }
+:where(.ws-check) { border-radius: 0; transform: rotate(45deg) scale(.8); border-color: var(--ws-red); }
+:where(.ws-check:checked) { background: var(--ws-cyan); border-color: var(--ws-cyan); box-shadow: 0 0 8px rgba(94, 246, 255, .35); }
+:where(.ws-check:checked)::after { display: none; }

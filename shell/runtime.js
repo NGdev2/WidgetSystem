@@ -4,6 +4,7 @@ import { call, listen, log, HOST } from './lib/bridge.js';
 import { Particles } from './lib/particles.js';
 import { blurredWallpaper } from './lib/glass.js';
 import * as ui from './lib/ui.js';
+import { micro } from './lib/micro.js';
 
 const $ = (s) => document.querySelector(s);
 const desk = $('#ws-desk');
@@ -14,7 +15,10 @@ const particles = new Particles($('#ws-particles'));
 const S = {
   widgets: new Map(),     // widget id -> manifest
   instances: new Map(),   // instance id -> Instance
-  theme: { dark: false },
+  theme: { dark: false, name: 'glass' },
+  systemDark: false,      // GNOME light/dark preference (themes may ignore it)
+  themes: [],             // available theme packs (themes/*/theme.json)
+  themePack: { id: 'glass', frame: {} },
   config: {},
   host: null,             // {origin, monitor, size} when running in the desktop host
   edit: false,
@@ -83,15 +87,20 @@ function geometry() {
     : { ox: 0, oy: 0, mw: innerWidth, mh: innerHeight };
 }
 
+function makeLink(href) {
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = href;
+  l.loaded = new Promise((res) => { l.onload = res; l.onerror = res; setTimeout(res, 1500); });
+  return l;
+}
+const themeKitHref = () => (S.themePack.kit ? `/themes/${S.themePack.id}/${S.themePack.kit}` : '');
+
+// Every shadow root gets: base kit, the theme's kit (swappable), then the widget's own styles.
 function styleLinks(manifest) {
-  const links = ['/shell/kit.css', ...manifest.styles.map((s) => `/w/${manifest.id}/${manifest._version}/${s}`)];
-  return links.map((href) => {
-    const l = document.createElement('link');
-    l.rel = 'stylesheet';
-    l.href = href;
-    l.loaded = new Promise((res) => { l.onload = res; l.onerror = res; setTimeout(res, 1500); });
-    return l;
-  });
+  const kit = makeLink(themeKitHref() || 'data:text/css,');
+  kit.dataset.themeKit = '';
+  return [makeLink('/shell/kit.css'), kit, ...manifest.styles.map((s) => makeLink(`/w/${manifest.id}/${manifest._version}/${s}`))];
 }
 
 const ICONS = {
@@ -142,7 +151,9 @@ class Instance {
         <button class="ws-ctl" data-act="menu" title="Options">${ICONS.more}</button>
       </div>
       <div class="ws-resize"></div>
-      <div class="ws-editcover"><button class="ws-edit-x" title="Remove">×</button><span class="ws-edit-name"></span></div>`;
+      <div class="ws-editcover"><button class="ws-edit-x" title="Remove">×</button><span class="ws-edit-name"></span></div>
+      <svg class="ws-edge" aria-hidden="true"></svg>`;
+    this.edge = el.querySelector('.ws-edge');
     this.bgImg = el.querySelector('.ws-bg-img');
     this.titleEl = el.querySelector('.ws-title');
     el.querySelector('.ws-edit-name').textContent = this.displayName;
@@ -183,6 +194,32 @@ class Instance {
     const r = this.rect();
     Object.assign(this.el.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
     this.applyGlass();
+    this.applyEdge();
+  }
+
+  // Cut-corner frame line for chamfer themes: an exact-pixel SVG, redrawn only when the size changes.
+  applyEdge() {
+    const f = S.themePack.frame || {};
+    if (f.shape !== 'chamfer') { if (this.edgeKey) { this.edge.innerHTML = ''; this.edgeKey = ''; } return; }
+    const { w, h } = this.rect();
+    const c = f.cut || 14;
+    const key = `${w}x${h}x${c}`;
+    if (key === this.edgeKey) return;
+    this.edgeKey = key;
+    this.edge.setAttribute('viewBox', `0 0 ${w} ${h}`);
+    this.edge.innerHTML = `<path class="line" d="M.5 .5H${w - c}L${w - 0.5} ${c}V${h - 0.5}H${c}L.5 ${h - c}Z"/>`
+      + `<path class="tab" d="M${w - c - 9} 0H${w - c}L${w} ${c}V${c + 9}Z"/>`
+      + `<path class="tick" d="M${c + 4} ${h - 1}H${c + 34}"/>`;
+  }
+
+  // Swap the theme kit in this widget's shadow roots and tell its CSS which theme is active.
+  applyThemeKit() {
+    const href = themeKitHref() || 'data:text/css,';
+    for (const sh of [this.shadow, this.overlayHost?.shadowRoot]) {
+      const link = sh?.querySelector('link[data-theme-kit]');
+      if (link && link.getAttribute('href') !== href) link.setAttribute('href', href);
+    }
+    for (const r of [this.root, this.overlayRoot]) if (r) r.dataset.theme = S.themePack.id;
   }
 
   applyGlass() {
@@ -213,6 +250,7 @@ class Instance {
     this.shadow.append(...links);
     this.root = document.createElement('div');
     this.root.className = 'ws-root';
+    this.root.dataset.theme = S.themePack.id;
     this.shadow.append(this.root);
     this.disposers = [];
     this.listeners = new Map();
@@ -396,6 +434,7 @@ function makeCtx(inst) {
         const sh = host.attachShadow({ mode: 'open' });
         const root = document.createElement('div');
         root.className = 'ws-root';
+        root.dataset.theme = S.themePack.id;
         root.style.cssText = 'position:absolute;inset:0;pointer-events:none';
         sh.append(...styleLinks(m), root);
         overlayLayer.append(host);
@@ -480,6 +519,7 @@ function makeCtx(inst) {
       return track(() => { alive = false; cancelAnimationFrame(id); });
     },
     get theme() { return { ...S.theme }; },
+    ui: { micro },
     say: (text, opts) => say(inst, text, opts),
     particles: {
       burst(opts = {}) {
@@ -626,6 +666,9 @@ function launcherMenu(e, el) {
     { icon: '＋', label: 'Add widget…', action: openGallery },
     { icon: '✎', label: S.edit ? 'Finish editing' : 'Edit widgets', action: () => setEdit(!S.edit) },
     { icon: S.hidden ? '◉' : '◌', label: S.hidden ? 'Show widgets' : 'Hide widgets', action: toggleHidden },
+    { kind: 'label', label: 'Theme' },
+    { kind: 'seg', value: S.themePack.id, onChange: (id) => call('theme.set', { id }),
+      options: S.themes.map((t) => ({ label: t.name, value: t.id })) },
     { icon: '↻', label: 'Reload all', action: () => location.reload() },
   ]);
   scheduleRegion();
@@ -748,11 +791,45 @@ addEventListener('error', (e) => log('error', `${e.message} @ ${e.filename}:${e.
 addEventListener('unhandledrejection', (e) => log('error', e.reason?.stack || String(e.reason), (String(e.reason?.stack).match(/\/w\/([^/]+)\//) || [, 'shell'])[1]));
 
 // ---------------------------------------------------------------- theme & glass
+function updateDark() {
+  const pref = S.themePack.dark;
+  const dark = pref === true ? true : pref === false ? false : S.systemDark;
+  const changed = dark !== S.theme.dark || S.theme.name !== S.themePack.id;
+  S.theme = { dark, name: S.themePack.id };
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  return changed;
+}
+
+async function loadThemeFonts(pack) {
+  window.__wsFonts ??= new Set();
+  await Promise.all((pack.fonts || []).map((f) => {
+    const key = `${f.family}|${f.weight}`;
+    if (window.__wsFonts.has(key)) return null;
+    window.__wsFonts.add(key);
+    const face = new FontFace(f.family, `url("/themes/${pack.id}/${f.file}")`, { weight: f.weight || '400' });
+    document.fonts.add(face);
+    return face.load().catch((e) => reportError(null, e));
+  }));
+}
+
+// Theme packs: themes/<id>/theme.css for the page, theme fonts, and an optional kit for widgets.
+async function applyThemePack(id) {
+  const pack = S.themes.find((t) => t.id === id) || S.themes.find((t) => t.id === 'glass') || { id: 'glass', frame: {} };
+  S.themePack = pack;
+  let link = document.getElementById('ws-theme');
+  if (!link) { link = Object.assign(document.createElement('link'), { id: 'ws-theme', rel: 'stylesheet' }); document.head.append(link); }
+  const loaded = new Promise((res) => { link.onload = res; link.onerror = res; setTimeout(res, 1500); });
+  link.href = `/themes/${pack.id}/theme.css`;
+  document.documentElement.dataset.wsTheme = pack.id;
+  await Promise.all([loaded, loadThemeFonts(pack)]);
+  const changed = updateDark();
+  for (const i of S.instances.values()) { i.applyThemeKit(); i.applyEdge(); }
+  if (changed) broadcast('theme', { ...S.theme });
+}
+
 async function applyTheme(t) {
-  const darkChanged = t.dark !== S.theme.dark;
-  S.theme = { dark: !!t.dark };
-  document.documentElement.dataset.theme = t.dark ? 'dark' : 'light';
-  if (darkChanged) broadcast('theme', { ...S.theme });
+  S.systemDark = !!t.dark;
+  if (updateDark()) broadcast('theme', { ...S.theme });
   if (t.wallpaper) {
     document.body.style.setProperty('--ws-wallpaper', `url("${t.wallpaper}")`);
     try {
@@ -766,6 +843,7 @@ async function applyTheme(t) {
 function onEvent(type, data) {
   switch (type) {
     case 'theme': applyTheme(data); break;
+    case 'theme-pack': applyThemePack(data.id); break;
     case 'host':
       S.host = data;
       for (const i of S.instances.values()) i.applyRect();
@@ -799,6 +877,8 @@ async function boot() {
   S.config = st.config || {};
   S.host = st.host;
   S.widgets = new Map(st.widgets.map((w) => [w.id, w]));
+  S.themes = st.themes || [];
+  await applyThemePack(S.config.theme || 'night-cron');
   await applyTheme(st.theme);
   if (S.config.launcher !== false) ui.launcher(S.config.launcherCorner, launcherMenu);
 

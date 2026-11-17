@@ -33,6 +33,18 @@ def _gsettings(schema, key):
         return None
 
 
+def themes_list():
+    """Every folder in themes/ with a theme.json."""
+    out = []
+    for d in sorted(config.THEMES_DIR.iterdir()) if config.THEMES_DIR.is_dir() else []:
+        try:
+            meta = json.loads((d / "theme.json").read_text())
+        except (OSError, ValueError):
+            continue
+        out.append({**meta, "id": d.name})
+    return out
+
+
 class Bus:
     def __init__(self):
         self.clients = set()
@@ -101,6 +113,15 @@ class App:
         t = self.theme
         return {"dark": t["dark"], "wallpaper": f"/wallpaper?v={t['wallpaperVersion']}" if t["wallpaper"] else None}
 
+    def set_theme(self, theme_id):
+        known = {t["id"] for t in themes_list()}
+        if theme_id not in known:
+            raise KeyError(f"no theme {theme_id!r}; available: {', '.join(sorted(known))}")
+        self.store.config["theme"] = theme_id
+        self.store.save_config()
+        self.bus.emit("theme-pack", {"id": theme_id})
+        return theme_id
+
     def watch_loop(self):
         """Poll for widget file changes (hot reload) and theme/wallpaper changes."""
         tick = 0
@@ -132,7 +153,15 @@ class App:
         if method == "state":
             return {"widgets": self.registry.public(), "layout": self.store.load_layout(),
                     "theme": self.public_theme(), "config": self.store.config,
-                    "host": self.host.info() if self.host else None}
+                    "themes": themes_list(), "host": self.host.info() if self.host else None}
+        if method == "theme.set":
+            return self.set_theme(p["id"])
+        if method == "config.set":
+            if p["key"] not in ("tears", "launcherCorner"):
+                raise KeyError(f"config key {p['key']!r} is not settable from the shell")
+            self.store.config[p["key"]] = p["value"]
+            self.store.save_config()
+            return True
         if method == "layout.save":
             self.layout_cache = p["layout"]
             self.store.save_layout(p["layout"])
@@ -217,6 +246,8 @@ class App:
                 paths.remove(path)
                 self.store.save_config()
             return {"widgetPaths": paths}
+        if cmd == "theme":
+            return self.set_theme(p["id"])
         if cmd == "snapshot":
             if not self.host:
                 raise RuntimeError("snapshot needs the desktop host (not --headless)")
@@ -281,6 +312,8 @@ def make_handler(app: App):
                 return self._file(config.SHELL_DIR, "index.html")
             if path.startswith("/shell/"):
                 return self._file(config.SHELL_DIR, path[len("/shell/"):])
+            if path.startswith("/themes/"):
+                return self._file(config.THEMES_DIR, path[len("/themes/"):])
             if path.startswith("/w/"):
                 # /w/<widget-id>/<version>/<file>; the version segment busts caches on hot reload
                 parts = path.split("/", 4)

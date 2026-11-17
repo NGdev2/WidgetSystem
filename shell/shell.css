@@ -14,6 +14,12 @@
   --ws-edge: rgba(255, 255, 255, .55);
   --ws-shadow: 0 12px 34px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .12);
   --ws-panel: rgba(250, 250, 252, .86);
+  /* shared tokens (themes override them; these defaults equal the Glass theme) */
+  --ws-font-mono: ui-monospace, "Ubuntu Mono", monospace;
+  --ws-red: #ff5f57; --ws-cyan: var(--ws-accent); --ws-yellow: #ffbd2e; --ws-ink: #fff;
+  --ws-primary: var(--ws-accent); --ws-on-primary: #fff; --ws-on-accent: #fff; --ws-fg-strong: var(--ws-fg);
+  --ws-panel-bg: var(--ws-tint-plain); --ws-glow: transparent; --ws-scan: none;
+  --ws-radius-sm: 10px; --ws-cut: 0px; --ws-cut-sm: 0px; --ws-skew: 0deg; --ws-decor: none;
 }
 :root[data-theme="dark"] {
   --ws-fg: #f3f4f7;

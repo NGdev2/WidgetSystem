@@ -33,3 +33,64 @@
 }
 :where(.ws-check:checked) { background: var(--ws-accent); border-color: var(--ws-accent); }
 :where(.ws-check:checked)::after { content: ""; width: 9px; height: 5px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
+
+/* ---------------------------------------------------------------- shared parts
+   Theme-aware through tokens only: rounded in Glass, cut-corner in Night Cron. */
+:where(.ws-bar) {
+  display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 calc(var(--ws-cut) + 8px) 0 10px;
+  background: var(--ws-primary); color: var(--ws-on-primary); border-radius: var(--ws-radius-sm) var(--ws-radius-sm) 0 0;
+  font: 700 13px var(--ws-font); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap;
+}
+:where(.ws-bar)::before { content: ""; width: 8px; height: 8px; background: currentColor; transform: rotate(45deg); flex: none; display: var(--ws-decor); }
+:where(.ws-sel) {
+  display: inline-flex; align-items: center; height: 30px; min-width: 160px;
+  box-shadow: inset 0 0 0 1px var(--ws-border); border-radius: var(--ws-radius-sm); background: var(--ws-surface);
+}
+:where(.ws-sel > button) { width: 30px; height: 100%; border: 0; background: none; color: var(--ws-primary); cursor: pointer; font: inherit; }
+:where(.ws-sel > button:hover) { color: var(--ws-accent); }
+:where(.ws-sel > output) { flex: 1; text-align: center; font-weight: 600; letter-spacing: .06em; color: var(--ws-fg-strong); white-space: nowrap; }
+:where(.ws-toggle) {
+  display: inline-flex; align-items: center; gap: 10px; border: 0; background: none; cursor: pointer; padding: 0;
+  font: 700 12px var(--ws-font); letter-spacing: .1em; text-transform: uppercase; color: var(--ws-primary);
+}
+:where(.ws-toggle) > i { position: relative; width: 52px; height: 22px; border-radius: var(--ws-radius-sm); box-shadow: inset 0 0 0 1px var(--ws-border); background: var(--ws-surface); }
+:where(.ws-toggle) > i::before {
+  content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: 20px; border-radius: calc(var(--ws-radius-sm) * .7);
+  background: var(--ws-fg-muted); transition: left .15s, background .15s;
+}
+:where(.ws-toggle.on) { color: var(--ws-accent); }
+:where(.ws-toggle.on) > i::before { left: 29px; background: var(--ws-accent); }
+:where(.ws-diamond) {
+  width: 20px; height: 20px; display: inline-grid; place-items: center; flex: none; border: 0; background: none; padding: 0; cursor: pointer;
+}
+:where(.ws-diamond)::before {
+  content: ""; width: 11px; height: 11px; border: 1.5px solid var(--ws-primary);
+  transform: rotate(45deg); border-radius: calc(var(--ws-radius-sm) / 4); transition: background .15s, border-color .15s;
+}
+:where(.ws-diamond.on)::before { background: var(--ws-accent); border-color: var(--ws-accent); }
+:where(.ws-tag) {
+  display: inline-block; font: 10px/1 var(--ws-font-mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+  padding: 3px 5px 2px; color: var(--ws-primary); border: 1px solid var(--ws-border); border-radius: calc(var(--ws-radius-sm) / 2);
+}
+:where(.ws-tag.accent) { color: var(--ws-accent); border-color: var(--ws-accent); }
+:where(.ws-tag.warn) { color: var(--ws-yellow); border-color: var(--ws-yellow); }
+:where(.ws-seg) { display: flex; gap: 3px; height: 8px; }
+:where(.ws-seg) > i { flex: 1; transform: skewX(var(--ws-skew)); border: 1px solid var(--ws-border); border-radius: calc(var(--ws-radius-sm) / 4); }
+:where(.ws-seg) > i.on { background: var(--ws-accent); border-color: var(--ws-accent); }
+:where(.ws-seg) > i.warn { background: var(--ws-yellow); border-color: var(--ws-yellow); }
+:where(.ws-seg) > i.hot { background: var(--ws-red); border-color: var(--ws-red); }
+:where(.ws-micro) {
+  display: flex; align-items: center; gap: 10px; min-width: 0; overflow: hidden; white-space: nowrap;
+  font: 9px var(--ws-font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ws-fg-muted);
+}
+:where(.ws-micro) > .bars {
+  display: var(--ws-decor); width: 42px; height: 8px; flex: none; opacity: .7;
+  background: repeating-linear-gradient(90deg, var(--ws-primary) 0 1px, transparent 1px 3px, var(--ws-primary) 3px 5px, transparent 5px 6px, var(--ws-primary) 6px 7px, transparent 7px 10px);
+}
+:where(.ws-micro) > .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+:where(.ws-banner) {
+  position: absolute; left: -2px; right: -2px; top: 42%; z-index: 20; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; gap: 12px; height: 44px;
+  background: var(--ws-yellow); color: var(--ws-ink); transform: skewY(calc(var(--ws-skew) / 8));
+  font: 700 18px var(--ws-font); letter-spacing: .2em; text-transform: uppercase;
+}

@@ -1,14 +1,43 @@
 {
   "id": "clock",
   "name": "Clock",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Digital or analog clock with date. Expand for a big focus clock.",
   "icon": "🕐",
-  "size": { "w": 300, "h": 156, "minW": 160, "minH": 100 },
-  "frame": { "look": "glass", "padding": 18 },
+  "size": {
+    "w": 300,
+    "h": 176,
+    "minW": 180,
+    "minH": 120
+  },
+  "frame": {
+    "look": "glass",
+    "padding": 14,
+    "showTitle": true,
+    "title": "Local time"
+  },
   "settings": [
-    { "key": "mode", "type": "select", "label": "Style", "options": ["digital", "analog"], "default": "digital" },
-    { "key": "h24", "type": "boolean", "label": "24-hour", "default": true },
-    { "key": "seconds", "type": "boolean", "label": "Show seconds", "default": false }
+    {
+      "key": "mode",
+      "type": "select",
+      "label": "Style",
+      "options": [
+        "digital",
+        "analog"
+      ],
+      "default": "digital"
+    },
+    {
+      "key": "h24",
+      "type": "boolean",
+      "label": "24-hour",
+      "default": true
+    },
+    {
+      "key": "seconds",
+      "type": "boolean",
+      "label": "Show seconds",
+      "default": false
+    }
   ]
 }

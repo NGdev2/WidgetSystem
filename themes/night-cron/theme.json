@@ -1,0 +1,14 @@
+{
+  "name": "Night Cron",
+  "description": "Dark maroon panels, red frames, cyan selection, yellow accents, cut corners. For people who work while cron does.",
+  "dark": true,
+  "frame": { "shape": "chamfer", "cut": 14 },
+  "fonts": [
+    { "family": "Rajdhani", "file": "fonts/Rajdhani-Regular.ttf", "weight": "400" },
+    { "family": "Rajdhani", "file": "fonts/Rajdhani-Medium.ttf", "weight": "500" },
+    { "family": "Rajdhani", "file": "fonts/Rajdhani-SemiBold.ttf", "weight": "600" },
+    { "family": "Rajdhani", "file": "fonts/Rajdhani-Bold.ttf", "weight": "700" },
+    { "family": "Share Tech Mono", "file": "fonts/ShareTechMono-Regular.ttf", "weight": "400" }
+  ],
+  "kit": "kit.css"
+}

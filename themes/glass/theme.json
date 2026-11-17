@@ -1,0 +1,7 @@
+{
+  "name": "Glass",
+  "description": "Frosted glass cards that follow the system light/dark setting.",
+  "dark": "system",
+  "frame": { "shape": "round" },
+  "fonts": []
+}
