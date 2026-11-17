@@ -401,12 +401,14 @@ class Instance {
     if (!(onResize || S.edit || inTitle || handle || e.ctrlKey)) return;
     e.preventDefault();
     e.stopPropagation();
-    const start = { x: e.clientX, y: e.clientY, ...this.cfg };
+    // pointer position and the frame's rect at press time (kept separate: mixing them made the
+    // frame jump so its corner sat under the cursor, and resizes jump to the maximum)
+    const start = { px: e.clientX, py: e.clientY, x: this.cfg.x, y: this.cfg.y, w: this.cfg.w, h: this.cfg.h };
     const snap = (v) => (S.edit ? Math.round(v / GRID) * GRID : Math.round(v));
     this.el.setPointerCapture(e.pointerId);
     this.el.classList.add('ws-dragging');
     const move = (ev) => {
-      const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
+      const dx = ev.clientX - start.px, dy = ev.clientY - start.py;
       if (onResize) {
         const s = this.size;
         this.cfg.w = clamp(snap(start.w + dx), s.minW || 60, s.maxW || innerWidth);
