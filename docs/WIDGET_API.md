@@ -1,7 +1,7 @@
 # Widget API (v1)
 
-This is the contract between **WidgetSystem** (the host) and **widgets** (DeskSprite, the
-tasks widget, anything else). If you need something that is not here, ask: see
+This is the contract between **WidgetSystem** (the host) and **widgets** (DeskSprite,
+CyberTasks, anything else). If you need something that is not here, ask: see
 [COMMS.md](COMMS.md).
 
 ## 1. What a widget is

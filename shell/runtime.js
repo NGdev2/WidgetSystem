@@ -665,7 +665,6 @@ function defaultLayout() {
   const pick = (id, x, y) => (S.widgets.has(id) ? { widget: id, x, y } : null);
   return [
     pick('clock', W - 324, 24),
-    pick('tasks', W - 324, 196),
     pick('sysmon', W - 324 - 236, 24),
     pick('pet', 60, innerHeight - 250),
   ].filter(Boolean);

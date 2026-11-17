@@ -1,7 +1,7 @@
 # WidgetSystem
 
 Desktop widgets that live **on your wallpaper**, not in your window list. You get frosted-glass
-cards (clock, tasks, system stats), creatures that walk across the screen and jump onto your
+cards (clock, system stats), creatures that walk across the screen and jump onto your
 widgets, particles and speech bubbles. Every widget is a small HTML/CSS/JS folder.
 
 - **Not an app you Alt-Tab to.** One transparent window, pinned below all apps and hidden from
@@ -46,9 +46,9 @@ See **[docs/WIDGET_API.md](docs/WIDGET_API.md)**. Minimal widget:
 ~/.local/share/widgetsystem/widgets/hello/main.js       export function mount(ctx){ ctx.root.textContent = 'Hello!' }
 ```
 
-Built-in examples in `widgets/`: `clock` (digital/analog), `tasks` (daily tasks with a
-progress ring and confetti), `sysmon` (CPU/RAM/battery/network), and `pet` (Mochi, a
-Tamagotchi-style creature that roams and jumps between widgets).
+Built-in examples in `widgets/`: `clock` (digital/analog), `sysmon` (CPU/RAM/battery/network),
+and `pet` (Mochi, a Tamagotchi-style creature that roams and jumps between widgets).
+For tasks, see [CyberTasks](https://github.com/NGdev2/CyberTasks).
 
 Several Claude sessions build widgets against this API. See [docs/COMMS.md](docs/COMMS.md).
 
