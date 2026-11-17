@@ -38,7 +38,7 @@ export function mount(ctx) {
   const mood = () => (st.food + st.fun + st.energy) / 3;
 
   // ---------- creature
-  const el = ctx.overlay.create({ interactive: true, className: 'pet',
+  const el = ctx.overlay.create({ interactive: true, className: 'pet', actor: { role: 'pet', name: ctx.settings.name, kind: 'blob' },
     html: '<div class="shadow"></div><div class="body"><div class="eye l"></div><div class="eye r"></div><div class="cheek l"></div><div class="cheek r"></div><div class="mouth"></div></div><div class="zzz">z</div>' });
   const body = el.querySelector('.body');
   const applyColor = () => el.style.setProperty('--c', ctx.settings.color);
@@ -211,7 +211,23 @@ export function mount(ctx) {
     if (data?.feed) actions.feed();
     if (data?.jump) jumpTo(pet.x, pet.y - 1);
   });
-  ctx.on('settings', () => { applyColor(); renderNest(); });
+  // Neon skin in Night Cron (or when chosen): a glowing outline instead of the soft blob.
+  const applySkin = () => { el.dataset.skin = ctx.settings.look === 'auto' ? (ctx.theme.name === 'night-cron' ? 'neon' : 'classic') : ctx.settings.look; };
+  applySkin();
+  ctx.on('theme', applySkin);
+  ctx.on('settings', () => { applyColor(); applySkin(); renderNest(); el.setActorState({ name: ctx.settings.name }); });
+  // Mochi adores fsck and follows it around "helping" (which slows fsck down).
+  ctx.every(4000, () => {
+    if (pet.sleeping || pet.dragged || !ctx.settings.talk) return;
+    const fsck = ctx.desktop.actors().find((a) => a.role === 'repair' && a.layer === 'back' && a.state !== 'sleep');
+    if (!fsck) return;
+    const fx = fsck.rect.x + fsck.rect.w / 2;
+    if (Math.abs(fx - pet.x) < 300 && Math.random() < 0.5) {
+      pet.target = Math.max(30, Math.min(ctx.desktop.size().w - 30, fx - 40));
+      wakeLoop();
+      if (Math.random() < 0.3) ctx.say(['fsck! hi!', 'can I help?', 'ooh, tape!', 'beep boop'][(Math.random() * 4) | 0], { anchor: el, duration: 1600 });
+    }
+  });
 
   // ---------- life tick
   ctx.every(5000, () => {

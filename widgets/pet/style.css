@@ -30,3 +30,13 @@
 .zzz { position: absolute; right: -10px; top: -14px; font: 600 13px var(--ws-font); color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); display: none; animation: z 2s steps(4) infinite; }  /* stepped: 2 repaints/s instead of 60 */
 .pet.sleep .zzz { display: block; }
 @keyframes z { 0% { opacity: .2; transform: translate(0,4px); } 50% { opacity: 1; transform: translate(4px,-3px); } 100% { opacity: .2; transform: translate(8px,-10px); } }
+
+/* neon skin (Night Cron): dark glass body with a glowing outline; only static box-shadows */
+.pet[data-skin="neon"] .body {
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.22), transparent 40%), rgba(10, 4, 8, .6);
+  box-shadow: inset 0 0 0 2px var(--c), 0 0 10px var(--c), inset 0 0 12px var(--c);
+}
+.pet[data-skin="neon"] .eye { background: var(--c); box-shadow: 0 0 6px var(--c); }
+.pet[data-skin="neon"] .eye::after { display: none; }
+.pet[data-skin="neon"] .mouth { border-color: var(--c); }
+.pet[data-skin="neon"] .shadow { background: var(--c); opacity: .35; height: 2px; filter: none; bottom: -2px; }
