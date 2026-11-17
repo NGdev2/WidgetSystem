@@ -34,7 +34,7 @@
   animation: fsck-stamp 1.3s ease-out forwards;
 }
 @keyframes fsck-stamp { 0% { opacity: 0; transform-origin: center; scale: 1.6; } 15% { opacity: 1; scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
-.fsck-patch svg { overflow: visible; }
+.fsck-patch svg { overflow: hidden; }  /* tape pieces end at the patch edge */
 .fsck-patch .tape { fill: var(--ws-yellow, #fcee0a); opacity: .9; stroke: #16060a; stroke-width: 1; stroke-dasharray: 6 6; }
 .fsck-patch .stitch { stroke: var(--ws-cyan, #5ef6ff); stroke-width: 2; stroke-linecap: round; }
 .fsck-patch svg.restore { opacity: .45; transition: opacity .6s; }
