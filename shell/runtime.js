@@ -6,6 +6,7 @@ import { blurredWallpaper } from './lib/glass.js';
 import * as ui from './lib/ui.js';
 import { micro } from './lib/micro.js';
 import { createTickets } from './lib/sheet.js';
+import { openNavigator, refreshNavigator } from './lib/navigator.js';
 
 const $ = (s) => document.querySelector(s);
 const desk = $('#ws-desk');
@@ -746,6 +747,7 @@ function launcherMenu(e, el) {
   const r = el.getBoundingClientRect();
   ui.menu(r.left - 200, r.top - 170, [
     { icon: '＋', label: 'Add widget…', action: openGallery },
+    { icon: '⬢', label: 'Navigator…', action: showNavigator },
     { icon: '✎', label: S.edit ? 'Finish editing' : 'Edit widgets', action: () => setEdit(!S.edit) },
     { icon: S.hidden ? '◉' : '◌', label: S.hidden ? 'Show widgets' : 'Hide widgets', action: toggleHidden },
     { icon: S.config.tears !== false ? '☑' : '☐', label: 'Characters may tear full-screen widgets', action: () => {
@@ -762,6 +764,12 @@ function launcherMenu(e, el) {
 
 function openGallery() {
   ui.gallery([...S.widgets.values()], (w, variant) => addInstance(w.id, { variant }), { onClose: scheduleRegion });
+  scheduleRegion();
+}
+
+// Navigator (shell/lib/navigator.js): browse, install, update and remove widgets.
+function showNavigator() {
+  openNavigator({ widgets: () => S.widgets, addInstance, onClose: scheduleRegion });
   scheduleRegion();
 }
 
@@ -954,6 +962,10 @@ function onEvent(type, data) {
       break;
     case 'widgets':
       S.widgets = new Map(data.map((w) => [w.id, w]));
+      refreshNavigator();
+      break;
+    case 'widget-removed': // uninstalled through the Navigator: close its instances
+      for (const i of [...S.instances.values()]) if (i.cfg.widget === data.id) i.close();
       break;
     case 'widget-changed':
       S.widgets.set(data.id, data);
@@ -967,6 +979,7 @@ function onCommand(c) {
   switch (c.cmd) {
     case 'edit': setEdit(c.on ?? !S.edit); break;
     case 'gallery': openGallery(); break;
+    case 'navigator': showNavigator(); break;
     case 'toggle': toggleHidden(); break;
     case 'reload': location.reload(); break;
     case 'add': addInstance(c.widget, { settings: c.settings }); break;

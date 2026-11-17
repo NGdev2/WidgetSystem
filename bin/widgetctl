@@ -16,6 +16,11 @@
   widgetctl snapshot [file.png]   render the widget layer to a PNG
   widgetctl eval '<js>'           run JavaScript in the shell page, print the result (testing)
   widgetctl path add|remove <dir> register a folder that contains widgets
+  widgetctl browse [--refresh]    list the widget index with installed state (Navigator)
+  widgetctl install <id> [--yes]  clone a widget from the index into your widgets folder
+  widgetctl update <id>           git pull an installed widget (fast-forward only)
+  widgetctl uninstall <id>        remove an installed widget (dev folders are only unregistered)
+  widgetctl navigator             open the Navigator panel
   widgetctl url                   print the dev URL (open in a normal browser)
   widgetctl log [-n N] [-f]       print the last N log lines (default 50); -f follows
 """
@@ -38,17 +43,72 @@ def info():
         sys.exit("WidgetSystem is not running (widgetctl start)")
 
 
-def call(method, params=None):
+def call(method, params=None, timeout=10):
     i = info()
     req = urllib.request.Request(f"http://127.0.0.1:{i['port']}/api/{method}", data=json.dumps(params or {}).encode(),
                                  headers={"X-WS-Token": i["token"], "Content-Type": "application/json"})
     try:
-        res = json.loads(urllib.request.urlopen(req, timeout=10).read())
+        res = json.loads(urllib.request.urlopen(req, timeout=timeout).read())
     except OSError as e:
         sys.exit(f"cannot reach WidgetSystem: {e}")
     if not res["ok"]:
         sys.exit(res["error"])
     return res["result"]
+
+
+# ---------------------------------------------------------------- Navigator (widgetsystem/navigator.py)
+DANGEROUS = ("shell", "network")
+
+
+def _ask(prompt):
+    try:
+        return input(prompt).strip().lower()
+    except EOFError:
+        return ""
+
+
+def nav_browse(refresh):
+    r = call("ctl.nav.index", {"refresh": refresh, "checkUpdates": True}, timeout=60)
+    when = {"remote": "online", "cache": "cached", "local": "local copy"}.get(r["source"], r["source"])
+    print(f"Widget index ({when}){': ' + r['error'] if r.get('error') else ''}")
+    for w in r["widgets"]:
+        if w["installed"]:
+            state = {"builtin": "built-in", "user": "installed", "dev": "dev folder"}[w["source"]]
+            if w.get("updateAvailable"):
+                state += ", update available"
+        else:
+            state = "coming soon" if w["private"] else "-"
+        perms = f"  [{', '.join(w['permissions'])}]" if w.get("permissions") else ""
+        local = "" if w["inIndex"] or w.get("source") == "builtin" else "  (not in index)"
+        print(f"  {w['id']:<16} {w['name']:<18} {state:<28}{perms}{local}")
+        if w.get("version") and w.get("path"):
+            print(f"  {'':<16} v{w['version']}  {w['path']}")
+
+
+def nav_change(cmd, wid, yes):
+    op = {"install": "install", "update": "update", "uninstall": "remove"}[cmd]
+    params = {"id": wid}
+    if op == "install":
+        entry = next((w for w in call("ctl.nav.index", timeout=60)["widgets"] if w["id"] == wid), None)
+        perms = [p for p in (entry or {}).get("permissions", []) if p in DANGEROUS]
+        if perms:
+            print(f"{wid} asks for these permissions: {', '.join(perms)}")
+            print("  shell   = run any command on your computer;  network = fetch any URL")
+            if not yes and _ask("Install it anyway? [y/N] ") not in ("y", "yes"):
+                sys.exit("cancelled")
+            params["acceptPermissions"] = perms
+        if entry and not entry.get("private") and not entry.get("installed"):
+            print(f"cloning {wid}...", flush=True)
+    r = call(f"ctl.nav.{op}", params, timeout=300)
+    if op == "install":
+        print(f"installed {wid} -> {r['path']}")
+        adds = [f"{wid}:{v}" for v in r.get("variants") or []] or [wid]
+        print("add it with: " + "  |  ".join(f"widgetctl add {a}" for a in adds))
+    elif op == "update":
+        print(f"updated {wid} {r['from']} -> {r['to']}" if r["updated"] else f"{wid} is already up to date ({r['to']})")
+    else:
+        what = {"deleted": "deleted", "unlinked": "removed the link", "unregistered": "unregistered dev folder"}[r["kind"]]
+        print(f"{what} {r['path']}; removed: {', '.join(r['removed']) or wid}")
 
 
 def main(argv):
@@ -94,7 +154,13 @@ def main(argv):
         print(call("ctl.eval", {"js": rest[0]}))
     elif cmd == "path":
         print(json.dumps(call(f"ctl.path.{rest[0]}", {"path": rest[1]}), indent=2))
-    elif cmd in ("edit", "gallery", "toggle", "reload", "devtools", "quit"):
+    elif cmd == "browse":
+        nav_browse("--refresh" in rest)
+    elif cmd in ("install", "update", "uninstall"):
+        if not rest or rest[0].startswith("-"):
+            sys.exit(f"usage: widgetctl {cmd} <id>")
+        nav_change(cmd, rest[0], "--yes" in rest or "-y" in rest)
+    elif cmd in ("edit", "gallery", "toggle", "reload", "devtools", "quit", "navigator"):
         call(f"ctl.{cmd}")
     else:
         sys.exit(f"unknown command {cmd!r}; see widgetctl --help")

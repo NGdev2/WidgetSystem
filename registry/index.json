@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "widgets": [
+    {
+      "id": "cybertasks",
+      "name": "CyberTasks",
+      "description": "Daily and weekly jobs with routines, in Night Cron style. Two views share one database: Daily Jobs for today's tasks and a Weekly Schedule with week objectives. Routines repeat by themselves.",
+      "repo": "https://github.com/NGdev2/CyberTasks",
+      "author": "NGdev2",
+      "icon": "https://raw.githubusercontent.com/NGdev2/CyberTasks/main/assets/icon.svg",
+      "tags": ["productivity", "tasks", "routines", "planner", "cyberpunk"],
+      "permissions": [],
+      "variants": ["day", "week"]
+    },
+    {
+      "id": "desksprite",
+      "name": "DeskSprite",
+      "description": "A stickman lives on your desktop. Befriend him, or fight him with drawn weapons and your apps, Animator vs Animation style. Everything that breaks is only a visual copy.",
+      "repo": "https://github.com/NGdev2/DeskSprite",
+      "author": "NGdev2",
+      "icon": "🖍️",
+      "tags": ["fun", "character", "game", "animation"],
+      "permissions": [],
+      "variants": [],
+      "private": true
+    }
+  ]
+}

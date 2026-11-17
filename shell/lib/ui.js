@@ -38,6 +38,7 @@ function openModal(el, { onClose, catcher = true } = {}) {
   modal = { el: wrap, onClose };
   return el;
 }
+export { openModal }; // used by lib/navigator.js
 
 // Esc closes the open menu/dialog and nothing else: preventDefault tells the runtime it was handled.
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) { closeModal(); e.preventDefault(); } });

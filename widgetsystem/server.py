@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-from . import config, desktop
+from . import config, desktop, navigator
 from .registry import Registry
 from .sysinfo import SysInfo
 
@@ -220,6 +220,8 @@ class App:
             if self.host:
                 self.host.show_devtools()
             return bool(self.host)
+        if method.startswith("nav."):  # Navigator: widget index, install/update/remove (navigator.py)
+            return navigator.handle(self, method[4:], p)
         if method.startswith("ctl."):
             return self.ctl(method[4:], p)
         raise KeyError(f"unknown method {method}")
@@ -264,6 +266,9 @@ class App:
             else:
                 threading.Timer(0.2, lambda: os._exit(0)).start()
             return True
+        if cmd.startswith("nav."):  # widgetctl browse/install/update/uninstall (navigator.py)
+            return navigator.handle(self, cmd[4:], p)
+        # "navigator" (open the panel) falls through to the shell like the other UI commands.
         if cmd == "add" and not self.registry.get(p.get("widget", "").split(":")[0]):
             raise KeyError(f"no widget with id {p.get('widget')!r}; see `widgetctl list`")
         if not self.bus.clients:
