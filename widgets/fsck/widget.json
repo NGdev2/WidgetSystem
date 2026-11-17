@@ -1,0 +1,20 @@
+{
+  "id": "fsck",
+  "name": "fsck",
+  "version": "1.0.0",
+  "description": "The system's repair daemon. Patches torn panels, sweeps up after fights, relinks lost objects, checks on crashed widgets. Cosmetic only: touches no files.",
+  "icon": "🔧",
+  "size": { "w": 220, "h": 150, "minW": 200, "minH": 140, "resizable": false },
+  "frame": { "look": "glass", "showTitle": true, "title": "fsck.service", "padding": 10 },
+  "expandable": false,
+  "multiInstance": false,
+  "settings": [
+    { "key": "look", "type": "select", "label": "Look", "options": ["auto", "classic", "neon"], "default": "auto" },
+    { "key": "talk", "type": "boolean", "label": "Talks", "default": true },
+    { "key": "patrol", "type": "select", "label": "Patrol frequency", "options": ["rare", "normal", "busy"], "default": "normal" },
+    { "key": "autoTears", "type": "boolean", "label": "Repair tears automatically", "default": true },
+    { "key": "repairDelay", "type": "select", "label": "Delay before repairing tears (s)", "options": ["0", "8", "30"], "default": "8" },
+    { "key": "health", "type": "boolean", "label": "Health rounds (CPU, memory, battery)", "default": true },
+    { "key": "align", "type": "boolean", "label": "Alignment inspector", "default": true }
+  ]
+}

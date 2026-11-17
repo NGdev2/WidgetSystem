@@ -1,0 +1,44 @@
+/* dock */
+.dock { height: 100%; display: flex; flex-direction: column; gap: 2px; font: 11px var(--ws-font-mono); letter-spacing: .05em; }
+.row { display: flex; justify-content: space-between; gap: 8px; color: var(--ws-fg-muted); text-transform: uppercase; }
+.row b { font-weight: normal; color: var(--ws-fg-strong); }
+.row.status { color: var(--ws-fg); text-transform: none; justify-content: flex-start; align-items: center; margin-bottom: 3px; white-space: nowrap; overflow: hidden; }
+.row.link { cursor: pointer; }
+.row.link:hover b { color: var(--ws-accent); text-decoration: underline; }
+.led { width: 7px; height: 7px; border-radius: 50%; flex: none; background: #4dff7a; box-shadow: 0 0 6px currentColor; }
+.led.amber { background: #ffb000; } .led.red { background: #ff4d4d; } .led.blue { background: #5aa0ff; } .led.off { background: #555; box-shadow: none; }
+.foot { margin-top: auto; font-size: 9px; color: var(--ws-fg-muted); opacity: .75; text-transform: uppercase; letter-spacing: .1em; }
+.ws-root[data-theme="night-cron"] .row span { color: var(--ws-red); }
+.ws-root[data-theme="night-cron"] .led { border-radius: 0; transform: rotate(45deg); }
+
+/* the daemon (overlay, window coordinates) */
+.fsck { width: 64px; height: 84px; cursor: grab; will-change: transform; }
+.fsck:active { cursor: grabbing; }
+.fsck canvas { display: block; transform-origin: 50% 96%; }
+.fsck.crt-off canvas { animation: fsck-crt-off .35s ease-in forwards; }
+.fsck.crt-on canvas { animation: fsck-crt-on .42s ease-out; }
+@keyframes fsck-crt-off { 0% { transform: none; filter: brightness(1); } 55% { transform: scale(1, .03); filter: brightness(3); } 100% { transform: scale(0, .03); opacity: 0; } }
+@keyframes fsck-crt-on { 0% { transform: scale(0, .03); filter: brightness(3); } 40% { transform: scale(1, .03); } 70% { transform: scale(1, 1.08); filter: brightness(1.4); } 100% { transform: none; filter: none; } }
+
+/* work effects (one-shot) */
+.fsck-scan { pointer-events: none; overflow: hidden; }
+.fsck-scan::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 2px; top: 0;
+  background: var(--ws-cyan, #5ef6ff); box-shadow: 0 0 10px var(--ws-cyan, #5ef6ff);
+  animation: fsck-scan .85s linear forwards;
+}
+@keyframes fsck-scan { to { top: 100%; } }
+.fsck-stamp {
+  display: grid; place-items: center; font: 700 18px var(--ws-font); letter-spacing: .2em; color: var(--ws-ink, #16060a);
+  background: var(--ws-yellow, #fcee0a); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  animation: fsck-stamp 1.3s ease-out forwards;
+}
+@keyframes fsck-stamp { 0% { opacity: 0; transform-origin: center; scale: 1.6; } 15% { opacity: 1; scale: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+.fsck-patch svg { overflow: visible; }
+.fsck-patch .tape { fill: var(--ws-yellow, #fcee0a); opacity: .9; stroke: #16060a; stroke-width: 1; stroke-dasharray: 6 6; }
+.fsck-patch .stitch { stroke: var(--ws-cyan, #5ef6ff); stroke-width: 2; stroke-linecap: round; }
+.fsck-patch svg.restore { opacity: .45; transition: opacity .6s; }
+.fsck-level { pointer-events: none; border: 1px solid var(--ws-yellow, #fcee0a); background: rgba(252, 238, 10, .15); }
+.fsck-level i { position: absolute; left: calc(50% - 5px); top: 1px; width: 10px; height: 4px; border-radius: 3px; background: #4dff7a; }
+.fsck-ask { display: flex; gap: 6px; }
+.fsck-ask .ws-btn { padding: 4px 10px; font-size: 12px; }
