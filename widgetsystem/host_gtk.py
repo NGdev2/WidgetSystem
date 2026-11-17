@@ -45,6 +45,9 @@ class GtkHost:
         self.view.set_background_color(Gdk.RGBA(0, 0, 0, 0))
         self.view.connect("context-menu", lambda *_: True)  # the shell draws its own menus
         self.view.connect("web-process-terminated", self._on_crash)
+        # A click on a widget should give the layer keyboard focus (typing, Esc). Connected on
+        # the view because WebKit consumes the press before the window would see it.
+        self.view.connect("button-press-event", self._on_press)
         self.win.add(self.view)
         self.win.connect("destroy", lambda *_: Gtk.main_quit())
         self.win.connect("realize", lambda *_: self._apply_region([], False))
@@ -104,6 +107,11 @@ class GtkHost:
             self.view.evaluate_javascript(f"window.__wsPointer&&window.__wsPointer({pos[0]},{pos[1]})", -1,
                                           None, None, None, None, None)
         return True
+
+    def _on_press(self, _view, event):
+        if not self.win.is_active():
+            self.win.present_with_time(event.time)
+        return False
 
     def focus(self):
         def do():

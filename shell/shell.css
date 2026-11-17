@@ -184,6 +184,14 @@ body.ws-edit .ws-resize { opacity: 1; z-index: 6; }
 .ws-field input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--ws-accent); }
 .ws-dialog .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
+.ws-exit-pill {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px 5px 12px; border: 1px solid var(--ws-border); border-radius: 999px; cursor: pointer;
+  font: 600 12px var(--ws-font); color: var(--ws-fg); background: var(--ws-panel); box-shadow: var(--ws-shadow);
+  opacity: .55; transition: opacity .15s; z-index: 1;
+}
+.ws-exit-pill:hover { opacity: 1; }
+.ws-exit-pill kbd { font: 10px var(--ws-font-mono, monospace); padding: 1px 5px; border: 1px solid var(--ws-border); border-radius: 4px; }
 .ws-launcher {
   position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer; padding: 0;
   background: var(--ws-panel); color: var(--ws-fg); box-shadow: 0 2px 10px rgba(0, 0, 0, .25);

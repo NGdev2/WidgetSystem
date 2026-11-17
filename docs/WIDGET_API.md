@@ -141,7 +141,7 @@ the log (see §6).
 | `ctx.frame.setStyle({look, border, shadow, radius, padding, tint, overflow, showTitle})` | partial update |
 | `ctx.frame.getStyle()` | |
 | `ctx.frame.resize(w, h)` / `ctx.frame.moveTo(x, y)` / `ctx.frame.getRect()` | window coordinates, CSS px |
-| `ctx.frame.expand()` / `.collapse()` / `.toggleExpand()` / `.isExpanded()` | full screen and back |
+| `ctx.frame.expand()` / `.collapse()` / `.toggleExpand()` / `.isExpanded()` | full screen and back. Only one widget is expanded at a time; it gets keyboard focus, and the host shows an "Exit full screen" pill |
 | `ctx.frame.close()` | remove this instance |
 | `ctx.menu.add({label, action, icon?})` | add items to the right-click menu. Returns a remove function |
 
@@ -163,7 +163,12 @@ elements inside a handle stay clickable), or freely in edit mode.
 | `editmode` | `{on}` |
 | `visibility` | `{visible}` (when the user uses "Hide widgets") |
 | `pointer` | `{x, y}`: the **global** mouse position in window coordinates, about 30 Hz, even where the layer is click-through. Tracking runs only while at least one widget listens |
-| `key` | `{key, code, type: 'keydown'\|'keyup', repeat, inInput, ctrl, shift, alt}` while the widget layer has keyboard focus. `inInput` is true when the user is typing in some input; ignore those events for game controls |
+| `key` | `{key, code, type: 'keydown'\|'keyup', repeat, inInput, ctrl, shift, alt}`, only for the **focused** widget: the one the user last clicked (its frame or one of its overlay elements), the expanded widget, or one that called `ctx.host.focus()`. `inInput` is true while the user types in an input; ignore those events for game controls |
+
+### Keys
+- `ctx.keys.capture(['Escape'])`: while your widget has focus, the host doesn't act on these keys
+  (normally Esc collapses the full-screen widget, then leaves edit mode). Returns a release function.
+- Esc in an open menu or dialog only closes that menu.
 
 ### Timers (auto-cancelled on unmount)
 - `ctx.every(ms, fn)` returns a stop function

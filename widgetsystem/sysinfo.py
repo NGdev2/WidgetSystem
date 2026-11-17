@@ -7,6 +7,8 @@ import time
 
 class SysInfo:
     def __init__(self):
+        self._cached = None
+        self._cached_at = 0.0
         self._cpu = self._read_cpu()
         self._net = (self._read_net(), time.monotonic())
 
@@ -85,6 +87,14 @@ class SysInfo:
         return {"rx": int((rx - prx) / dt), "tx": int((tx - ptx) / dt)}
 
     def stats(self):
+        # Several widgets poll; caching for 1 s keeps the CPU/net deltas over a sane window.
+        now = time.monotonic()
+        if self._cached and now - self._cached_at < 1.0:
+            return self._cached
+        self._cached, self._cached_at = self._collect(), now
+        return self._cached
+
+    def _collect(self):
         disk = shutil.disk_usage("/")
         with open("/proc/uptime") as f:
             uptime = float(f.read().split()[0])

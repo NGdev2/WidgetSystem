@@ -22,12 +22,14 @@ const S = {
   glassUrl: null,
   pointer: { x: -1, y: -1 },
   pointerTracking: false,
+  focused: null,          // instance id that last got a click (or asked for focus): receives key events
 };
 const GRID = 8;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const uid = (w) => `${w}-${Math.random().toString(36).slice(2, 7)}`;
 
 if (HOST === 'browser') document.body.classList.add('ws-browser');
+window.__wsState = S; // read-only introspection for `widgetctl eval` tests
 
 // ---------------------------------------------------------------- storage
 const stores = new Map(); // scope -> {data, timer}
@@ -108,6 +110,7 @@ class Instance {
     this.disposers = [];
     this.menuItems = [];
     this.interactive = new Set();
+    this.captured = new Set();
     this.build();
   }
 
@@ -215,6 +218,7 @@ class Instance {
     this.listeners = new Map();
     this.menuItems = [];
     this.interactive = new Set();
+    this.captured = new Set();
     this.mounted = true;
 
     const ro = new ResizeObserver(([e]) => this.emit('resize', { w: e.contentRect.width, h: e.contentRect.height }));
@@ -287,6 +291,11 @@ class Instance {
   setExpanded(on) {
     if (on && !this.manifest.expandable) return;
     if (!!this.cfg.expanded === on) return;
+    if (on) {
+      // One full-screen widget at a time; it takes keyboard focus so Esc and typing work.
+      for (const i of S.instances.values()) if (i !== this) i.setExpanded(false);
+      focusInstance(this);
+    }
     this.cfg.expanded = on;
     this.el.classList.add('ws-animate');
     this.el.classList.toggle('ws-expanded', on);
@@ -294,6 +303,7 @@ class Instance {
     this.applyRect();
     setTimeout(() => this.el.classList.remove('ws-animate'), 400);
     this.emit(on ? 'expand' : 'collapse');
+    updateExitPill();
     saveLayout();
   }
   toggleExpand() { this.setExpanded(!this.cfg.expanded); }
@@ -448,6 +458,10 @@ function makeCtx(inst) {
       },
     },
     on,
+    keys: {
+      /** Consume these keys (e.g. ['Escape']) while your widget has focus: the host won't act on them. */
+      capture(list) { for (const k of list) inst.captured.add(k); return () => { for (const k of list) inst.captured.delete(k); }; },
+    },
     every: (ms, fn) => { const t = setInterval(fn, ms); return track(() => clearInterval(t)); },
     after: (ms, fn) => { const t = setTimeout(fn, ms); return track(() => clearTimeout(t)); },
     raf(fn, { fps = 60 } = {}) {
@@ -487,7 +501,7 @@ function makeCtx(inst) {
       run: (cmd, opts = {}) => hostCall('run', { cmd, ...opts }),
       apps: () => hostCall('apps'),
       desktopItems: () => hostCall('desktopItems'),
-      focus: () => hostCall('host.focus'),
+      focus: () => { focusInstance(inst); return hostCall('host.focus'); },
     },
   };
 }
@@ -514,11 +528,23 @@ function setPointer(x, y) {
 window.__wsPointer = setPointer; // called by the desktop host (~30 Hz, works outside the input region)
 addEventListener('pointermove', (e) => setPointer(e.clientX, e.clientY), true);
 
+function focusInstance(inst) { S.focused = inst?.id ?? null; }
+
+// The widget you last clicked (frame or one of its overlay elements) has keyboard focus.
+addEventListener('pointerdown', (e) => {
+  for (const n of e.composedPath()) {
+    if (n.classList?.contains('ws-frame') && n.dataset.id) { S.focused = n.dataset.id; return; }
+    if (n.dataset?.owner) { S.focused = n.dataset.owner; return; }
+  }
+}, true);
+
 for (const type of ['keydown', 'keyup']) {
   addEventListener(type, (e) => {
+    const inst = S.instances.get(S.focused);
+    if (!inst) return;
     const t = e.composedPath()[0];
     const inInput = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
-    broadcast('key', { key: e.key, code: e.code, type, repeat: e.repeat, inInput, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey });
+    inst.emit('key', { key: e.key, code: e.code, type, repeat: e.repeat, inInput, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey });
   }, true);
 }
 
@@ -626,10 +652,25 @@ function toggleHidden() {
 }
 
 addEventListener('keydown', (e) => {
-  if (e.key !== 'Escape' || ui.isModalOpen()) return;
-  if (S.edit) setEdit(false);
-  else for (const i of S.instances.values()) i.setExpanded(false);
+  if (e.key !== 'Escape' || e.defaultPrevented) return;          // a menu/dialog already handled it
+  const focused = S.instances.get(S.focused);
+  if (focused?.captured.has('Escape')) return;                    // the widget consumes Esc itself
+  const expanded = [...S.instances.values()].find((i) => i.cfg.expanded);
+  if (expanded) expanded.setExpanded(false);
+  else if (S.edit) setEdit(false);
 });
+
+// Always-visible way out of full screen, even for widgets that hide the host controls.
+let exitPill = null;
+function updateExitPill() {
+  const expanded = [...S.instances.values()].find((i) => i.cfg.expanded);
+  if (!expanded) { exitPill?.remove(); exitPill = null; return; }
+  if (!exitPill) {
+    exitPill = ui.h('button', { class: 'ws-exit-pill', title: 'Exit full screen (Esc)' }, '⤡ Exit full screen', ui.h('kbd', {}, 'Esc'));
+    document.getElementById('ws-ui').append(exitPill);
+  }
+  exitPill.onclick = () => [...S.instances.values()].find((i) => i.cfg.expanded)?.setExpanded(false);
+}
 
 // ---------------------------------------------------------------- instances
 function freeSpot(w, h) {

@@ -39,7 +39,8 @@ function openModal(el, { onClose, catcher = true } = {}) {
   return el;
 }
 
-addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+// Esc closes the open menu/dialog and nothing else: preventDefault tells the runtime it was handled.
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal) { closeModal(); e.preventDefault(); } });
 
 /** items: {label, icon, action, danger} | 'sep' | {label, kind:'label'} | {kind:'seg', options:[{label,value}], value, onChange} */
 export function menu(x, y, items, opts = {}) {
