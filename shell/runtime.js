@@ -736,9 +736,9 @@ function frameMenu(inst, x, y) {
     m.multiInstance ? { icon: '⧉', label: 'Duplicate', action: () => addInstance(m.id, { variant: inst.cfg.variant, settings: inst.cfg.settings, style: inst.cfg.style }) } : null,
     { icon: '↻', label: 'Reload widget', action: () => inst.remount() },
     { icon: '✎', label: 'Edit widgets', action: () => setEdit(true) },
-    { icon: '＋', label: 'Add widget…', action: openGallery },
+    S.config.solo ? null : { icon: '＋', label: 'Add widget…', action: openGallery },
     'sep',
-    { icon: '✕', label: 'Remove', danger: true, action: () => inst.close() },
+    S.config.solo ? null : { icon: '✕', label: 'Remove', danger: true, action: () => inst.close() },
   ], { onClose: () => inst.el.classList.remove('ws-menu-open') });
   scheduleRegion();
 }
@@ -840,6 +840,17 @@ async function addInstance(widgetId, extra = {}) {
 
 function defaultLayout() {
   const W = innerWidth;
+  if (S.config.solo) {   // standalone: one instance per variant, side by side from the top right
+    const m = S.widgets.get(S.config.soloWidget);
+    if (!m) return [];
+    const vs = S.config.soloVariants?.length ? S.config.soloVariants : [null];
+    let x = W - 24;
+    return vs.map((v) => {
+      const size = (m.variants || []).find((e) => e.id === v)?.size || m.size;
+      x -= size.w + 16;
+      return { widget: v ? `${m.id}:${v}` : m.id, x: Math.max(16, x + 16), y: 24 };
+    });
+  }
   const pick = (id, x, y) => (S.widgets.has(id) ? { widget: id, x, y } : null);
   return [
     pick('clock', W - 324, 24),
@@ -1001,7 +1012,7 @@ async function boot() {
 
   let cfgs = st.layout?.instances;
   if (!cfgs) {
-    for (const d of defaultLayout()) await addInstance(d.widget, d);
+    for (const d of defaultLayout()) await addInstance(d.widget, { x: d.x, y: d.y });
   } else {
     for (const cfg of cfgs) {
       if (!S.widgets.has(cfg.widget)) { log('warn', `widget ${cfg.widget} not found; instance ${cfg.id} skipped`); continue; }

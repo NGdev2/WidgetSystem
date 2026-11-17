@@ -14,7 +14,9 @@ DATA_DIR = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) /
 USER_WIDGETS = DATA_DIR / "widgets"
 STORAGE_DIR = DATA_DIR / "storage"
 LOG_FILE = DATA_DIR / "widgetsystem.log"
-RUNTIME_FILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / "widgetsystem.json"
+# One runtime file per running instance (solo widgets run as "solo-<id>" next to the full system).
+INSTANCE = os.environ.get("WIDGETSYSTEM_INSTANCE", "widgetsystem")
+RUNTIME_FILE = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp")) / f"{INSTANCE}.json"
 
 DEFAULT_PORT = 47800
 
@@ -66,6 +68,8 @@ class Store:
             _write_json(self.config_path, self.config)
 
     def widget_paths(self):
+        if self.config.get("solo"):   # standalone: only the one widget
+            return [Path(p).expanduser() for p in self.config.get("widgetPaths", [])]
         paths = [BUILTIN_WIDGETS, USER_WIDGETS]
         paths += [Path(p).expanduser() for p in self.config.get("widgetPaths", [])]
         return paths

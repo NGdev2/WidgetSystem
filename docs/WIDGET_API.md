@@ -326,7 +326,21 @@ single always-running 60 fps animation costs about 25% CPU on its own. In practi
   second, not 60.
 - Avoid `backdrop-filter` and `filter: blur()` on elements that move.
 
-## 6. Debugging
+## 6. Running a widget standalone
+Any widget can run without a WidgetSystem install:
+
+```bash
+widgetctl export-solo /path/to/my-widget   # once: bundles solo/ (a copy of the runner) + run.sh
+cd /path/to/my-widget && ./run.sh          # start; ./run.sh stop to stop
+```
+
+Solo mode shows only that widget (one instance per variant), without the ✦ launcher, gallery or
+Navigator. It uses its own data (`~/.local/share/widgetsystem-solo/<id>/`), runtime file and port,
+so it can run next to a full WidgetSystem. Set `"theme": "night-cron"` (or `"glass"`) in
+`widget.json` to choose its default look. Commit `solo/` and `run.sh` so people can just clone
+and run.
+
+## 7. Debugging
 
 - Developing in a normal browser: run `widgetctl url` and open the printed URL in
   Chrome/Firefox. You get the same shell and widgets, with full devtools.

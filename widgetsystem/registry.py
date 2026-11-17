@@ -7,7 +7,7 @@ from pathlib import Path
 from .config import BUILTIN_WIDGETS as _BUILTIN
 
 BUILTIN_DIR = _BUILTIN.resolve()
-SKIP_DIRS = {"node_modules", ".git", "__pycache__", "dist", "build", ".venv"}
+SKIP_DIRS = {"node_modules", ".git", "__pycache__", "dist", "build", ".venv", "solo"}   # solo/ = a bundled runner
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 MANIFEST_DEFAULTS = {
