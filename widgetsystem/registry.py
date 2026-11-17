@@ -8,6 +8,9 @@ from .config import BUILTIN_WIDGETS as _BUILTIN
 
 BUILTIN_DIR = _BUILTIN.resolve()
 SKIP_DIRS = {"node_modules", ".git", "__pycache__", "dist", "build", ".venv", "solo"}   # solo/ = a bundled runner
+# Hot reload watches only what a widget runs: not docs, trackers, tests or notes.
+WATCH_SKIP_DIRS = SKIP_DIRS | {"docs", "tracker", "test", "tests"}
+WATCH_SKIP_EXT = {".md", ".txt", ".log"}
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 MANIFEST_DEFAULTS = {
@@ -50,8 +53,10 @@ def _dir_version(path: Path) -> str:
     newest = 0.0
     count = 0
     for dirpath, dirnames, filenames in os.walk(path):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
+        dirnames[:] = [d for d in dirnames if d not in WATCH_SKIP_DIRS and not d.startswith(".")]
         for f in filenames:
+            if os.path.splitext(f)[1].lower() in WATCH_SKIP_EXT:
+                continue
             try:
                 newest = max(newest, os.stat(os.path.join(dirpath, f)).st_mtime)
             except OSError:
