@@ -24,7 +24,7 @@ MANIFEST_DEFAULTS = {
 SIZE_DEFAULTS = {"w": 260, "h": 180, "minW": 80, "minH": 60, "maxW": None, "maxH": None, "resizable": True}
 FRAME_DEFAULTS = {
     "look": "glass", "title": None, "showTitle": False, "border": True, "shadow": True,
-    "radius": 18, "padding": 14, "overflow": "hidden", "tint": None, "controls": True,
+    "radius": 18, "padding": 14, "overflow": "hidden", "tint": None, "controls": True, "dragAnywhere": True,
 }
 
 
