@@ -221,6 +221,10 @@ class App:
             if not self.host:
                 raise RuntimeError("snapshot needs the desktop host (not --headless)")
             return self.host.snapshot(str(Path(p.get("path") or "/tmp/widgetsystem-snapshot.png").expanduser().resolve()))
+        if cmd == "eval":
+            if not self.host:
+                raise RuntimeError("eval needs the desktop host (not --headless)")
+            return self.host.eval_js(p["js"])
         if cmd == "devtools":
             return self.api("host.devtools", p)
         if cmd == "quit":
@@ -229,7 +233,7 @@ class App:
             else:
                 threading.Timer(0.2, lambda: os._exit(0)).start()
             return True
-        if cmd == "add" and not self.registry.get(p.get("widget", "")):
+        if cmd == "add" and not self.registry.get(p.get("widget", "").split(":")[0]):
             raise KeyError(f"no widget with id {p.get('widget')!r}; see `widgetctl list`")
         if not self.bus.clients:
             raise RuntimeError("no shell connected")

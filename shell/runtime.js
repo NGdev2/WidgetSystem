@@ -35,16 +35,24 @@ async function loadStore(scope) {
   if (!stores.has(scope)) stores.set(scope, { data: await call('storage.get', { scope }).catch(() => ({})), timer: 0 });
   return stores.get(scope);
 }
-function storageApi(scope) {
+function storageApi(scope, inst) {
   const st = stores.get(scope);
+  // Widget-wide storage: tell the other instances of the same widget what changed.
+  const notify = (key) => {
+    if (!scope.startsWith('w-')) return;
+    queueMicrotask(() => {
+      for (const i of S.instances.values())
+        if (i !== inst && i.mounted && 'w-' + i.manifest.id === scope) i.emit('shared', { key });
+    });
+  };
   const save = () => {
     clearTimeout(st.timer);
     st.timer = setTimeout(() => call('storage.set', { scope, data: st.data }), 400);
   };
   return {
     get: (k, d) => (k in st.data ? st.data[k] : d),
-    set: (k, v) => { st.data[k] = v; save(); return v; },
-    delete: (k) => { delete st.data[k]; save(); },
+    set: (k, v) => { st.data[k] = v; save(); notify(k); return v; },
+    delete: (k) => { delete st.data[k]; save(); notify(k); },
     all: () => ({ ...st.data }),
   };
 }
@@ -103,10 +111,13 @@ class Instance {
     this.build();
   }
 
-  get style() { return { ...this.manifest.frame, ...(this.cfg.style || {}) }; }
+  get variant() { return (this.manifest.variants || []).find((v) => v.id === this.cfg.variant) || null; }
+  get size() { return { ...this.manifest.size, ...(this.variant?.size || {}) }; }
+  get displayName() { return this.variant?.name || this.manifest.name; }
+  get style() { return { ...this.manifest.frame, ...(this.variant?.frame || {}), ...(this.cfg.style || {}) }; }
   get settings() {
     const defs = Object.fromEntries((this.manifest.settings || []).map((s) => [s.key, s.default]));
-    return { ...defs, ...(this.cfg.settings || {}) };
+    return { ...defs, ...(this.variant?.settings || {}), ...(this.cfg.settings || {}) };
   }
   rect() {
     return this.cfg.expanded ? { x: 0, y: 0, w: innerWidth, h: innerHeight }
@@ -131,7 +142,7 @@ class Instance {
       <div class="ws-editcover"><button class="ws-edit-x" title="Remove">×</button><span class="ws-edit-name"></span></div>`;
     this.bgImg = el.querySelector('.ws-bg-img');
     this.titleEl = el.querySelector('.ws-title');
-    el.querySelector('.ws-edit-name').textContent = this.manifest.name;
+    el.querySelector('.ws-edit-name').textContent = this.displayName;
     el.querySelector('[data-act=expand]').onclick = () => this.toggleExpand();
     el.querySelector('[data-act=menu]').onclick = (e) => {
       const r = e.currentTarget.getBoundingClientRect();
@@ -154,11 +165,12 @@ class Instance {
     d.shadow = String(s.look !== 'clear' && !!s.shadow);
     d.title = String(s.look !== 'clear' && !!s.showTitle);
     d.overflow = s.overflow === 'visible' ? 'visible' : 'hidden';
-    d.resizable = String(this.manifest.size.resizable !== false);
+    d.resizable = String(this.size.resizable !== false);
+    d.controls = String(s.controls !== false);
     this.el.style.setProperty('--r', (this.cfg.expanded ? 0 : s.radius) + 'px');
     this.el.style.setProperty('--pad', s.padding + 'px');
     if (s.tint) this.el.style.setProperty('--tint', s.tint); else this.el.style.removeProperty('--tint');
-    this.titleEl.textContent = s.title || this.manifest.name;
+    this.titleEl.textContent = s.title || this.displayName;
     this.el.querySelector('[data-act=expand]').style.display = this.manifest.expandable ? '' : 'none';
     this.el.querySelector('[data-act=expand]').innerHTML = this.cfg.expanded ? ICONS.collapse : ICONS.expand;
     this.applyGlass();
@@ -257,7 +269,7 @@ class Instance {
 
   // ---- frame operations
   resize(w, h) {
-    const s = this.manifest.size;
+    const s = this.size;
     this.cfg.w = Math.round(clamp(w, s.minW || 60, s.maxW || innerWidth));
     this.cfg.h = Math.round(clamp(h, s.minH || 40, s.maxH || innerHeight));
     this.applyRect();
@@ -316,19 +328,21 @@ class Instance {
     if (this.cfg.expanded) return;
     const inTitle = path.some((n) => n.classList?.contains('ws-titlebar'));
     const onControl = path.some((n) => n.classList?.contains('ws-ctl') || n.classList?.contains('ws-edit-x'));
-    const handle = path.some((n) => n.hasAttribute?.('data-ws-drag'));
+    // A drag handle starts a drag unless the press began on something clickable inside it.
+    const hIdx = path.findIndex((n) => n.hasAttribute?.('data-ws-drag'));
+    const handle = hIdx >= 0 && !path.slice(0, hIdx).some((n) => n.matches?.('button,input,textarea,select,a,[data-ws-nodrag]'));
     if (onControl) return;
     if (!(onResize || S.edit || inTitle || handle || e.ctrlKey)) return;
     e.preventDefault();
     e.stopPropagation();
     const start = { x: e.clientX, y: e.clientY, ...this.cfg };
-    const snap = (v) => (S.edit ? Math.round(v / GRID) * GRID : v);
+    const snap = (v) => (S.edit ? Math.round(v / GRID) * GRID : Math.round(v));
     this.el.setPointerCapture(e.pointerId);
     this.el.classList.add('ws-dragging');
     const move = (ev) => {
       const dx = ev.clientX - start.x, dy = ev.clientY - start.y;
       if (onResize) {
-        const s = this.manifest.size;
+        const s = this.size;
         this.cfg.w = clamp(snap(start.w + dx), s.minW || 60, s.maxW || innerWidth);
         this.cfg.h = clamp(snap(start.h + dy), s.minH || 40, s.maxH || innerHeight);
       } else {
@@ -400,6 +414,7 @@ function makeCtx(inst) {
   return {
     id: inst.id,
     widget: m,
+    variant: inst.cfg.variant || null,
     root: inst.root,
     shadow: inst.shadow,
     asset: (p) => `/w/${m.id}/${m._version}/${p}`,
@@ -410,8 +425,8 @@ function makeCtx(inst) {
     get settings() { return inst.settings; },
     setSetting: (k, v) => inst.setSettings({ [k]: v }),
     openSettings: () => openSettings(inst),
-    storage: storageApi('i-' + inst.id),
-    shared: storageApi('w-' + m.id),
+    storage: storageApi('i-' + inst.id, inst),
+    shared: storageApi('w-' + m.id, inst),
     frame: {
       setTitle: (t) => inst.setStyle({ title: t }),
       showTitle: (b) => inst.setStyle({ showTitle: !!b }),
@@ -569,7 +584,7 @@ function frameMenu(inst, x, y) {
       options: [{ label: 'Title', value: `${!s.showTitle}|${!!s.border}` }, { label: 'Border', value: `${!!s.showTitle}|${!s.border}` }]
         .map((o, i) => ({ ...o, label: (i === 0 ? s.showTitle : s.border) ? `✓ ${o.label}` : o.label })) },
     'sep',
-    m.multiInstance ? { icon: '⧉', label: 'Duplicate', action: () => addInstance(m.id, { settings: inst.cfg.settings, style: inst.cfg.style }) } : null,
+    m.multiInstance ? { icon: '⧉', label: 'Duplicate', action: () => addInstance(m.id, { variant: inst.cfg.variant, settings: inst.cfg.settings, style: inst.cfg.style }) } : null,
     { icon: '↻', label: 'Reload widget', action: () => inst.remount() },
     { icon: '✎', label: 'Edit widgets', action: () => setEdit(true) },
     { icon: '＋', label: 'Add widget…', action: openGallery },
@@ -591,7 +606,7 @@ function launcherMenu(e, el) {
 }
 
 function openGallery() {
-  ui.gallery([...S.widgets.values()], (w) => addInstance(w.id), { onClose: scheduleRegion });
+  ui.gallery([...S.widgets.values()], (w, variant) => addInstance(w.id, { variant }), { onClose: scheduleRegion });
   scheduleRegion();
 }
 
@@ -626,15 +641,18 @@ function freeSpot(w, h) {
 }
 
 async function addInstance(widgetId, extra = {}) {
+  if (widgetId.includes(':')) [widgetId, extra.variant] = widgetId.split(':'); // "widget:variant"
   const m = S.widgets.get(widgetId);
   if (!m) return null;
   if (!m.multiInstance) {
     const existing = [...S.instances.values()].find((i) => i.manifest.id === widgetId);
     if (existing) { existing.el.animate([{ transform: 'scale(1.04)' }, { transform: 'none' }], 300); return existing; }
   }
-  const { w, h } = m.size;
+  const variant = (m.variants || []).find((v) => v.id === extra.variant) || null;
+  const { w, h } = variant?.size || m.size;
   const pos = extra.x != null ? { x: extra.x, y: extra.y } : freeSpot(w, h);
-  const cfg = { id: uid(widgetId), widget: widgetId, ...pos, w, h, style: extra.style || {}, settings: extra.settings || {}, expanded: false };
+  const cfg = { id: uid(widgetId), widget: widgetId, ...(variant ? { variant: variant.id } : {}), ...pos, w, h,
+    style: extra.style || {}, settings: extra.settings || {}, expanded: false };
   const inst = new Instance(cfg);
   S.instances.set(cfg.id, inst);
   saveLayout();

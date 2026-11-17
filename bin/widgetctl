@@ -13,6 +13,7 @@
   widgetctl reload                reload the whole shell
   widgetctl devtools              open the WebKit inspector
   widgetctl snapshot [file.png]   render the widget layer to a PNG
+  widgetctl eval '<js>'           run JavaScript in the shell page, print the result (testing)
   widgetctl path add|remove <dir> register a folder that contains widgets
   widgetctl url                   print the dev URL (open in a normal browser)
   widgetctl log [-n N] [-f]       print the last N log lines (default 50); -f follows
@@ -86,6 +87,8 @@ def main(argv):
         call("ctl.send", {"target": rest[0], "data": data})
     elif cmd == "snapshot":
         print(call("ctl.snapshot", {"path": os.path.abspath(rest[0]) if rest else None}))
+    elif cmd == "eval":
+        print(call("ctl.eval", {"js": rest[0]}))
     elif cmd == "path":
         print(json.dumps(call(f"ctl.path.{rest[0]}", {"path": rest[1]}), indent=2))
     elif cmd in ("edit", "gallery", "toggle", "reload", "devtools", "quit"):

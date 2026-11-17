@@ -112,6 +112,26 @@ class GtkHost:
             return False
         GLib.idle_add(do)
 
+    def eval_js(self, script):
+        """Run JavaScript in the shell page (dev/testing). Returns the result as JSON text."""
+        import threading
+        done = threading.Event()
+        result = {}
+
+        def finished(view, res):
+            try:
+                value = view.evaluate_javascript_finish(res)
+                result["value"] = value.to_json(0) if not value.is_undefined() else None
+            except Exception as e:  # noqa: BLE001
+                result["error"] = str(e)
+            done.set()
+
+        GLib.idle_add(lambda: self.view.evaluate_javascript(script, -1, None, None, None, finished) and False)
+        done.wait(10)
+        if "error" in result:
+            raise RuntimeError(result["error"])
+        return result.get("value")
+
     def snapshot(self, path):
         """Render the widget layer (transparent background) to a PNG. Blocks until written."""
         import threading

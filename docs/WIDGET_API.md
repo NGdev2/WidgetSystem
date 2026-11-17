@@ -59,9 +59,15 @@ so your CSS cannot leak out and the page's CSS cannot leak in.
     "radius": 18,
     "padding": 14,
     "overflow": "hidden",        // "visible" lets your content draw outside the box
-    "tint": null                 // CSS color to override the glass tint
+    "tint": null,                // CSS color to override the glass tint
+    "controls": true             // false hides the host's hover buttons (custom-chrome widgets)
   },
 
+  "variants": [                  // optional: several gallery entries from one folder
+    { "id": "day",  "name": "Daily Jobs",      "size": { "w": 340, "h": 420 }, "settings": { "view": "day" } },
+    { "id": "week", "name": "Weekly Schedule", "size": { "w": 860, "h": 340 }, "settings": { "view": "week" },
+      "frame": { "padding": 0 } }
+  ],
   "expandable": true,            // can go full screen
   "multiInstance": true,
   "permissions": [],             // "shell" | "network" (see ctx.host)
@@ -74,6 +80,10 @@ so your CSS cannot leak out and the page's CSS cannot leak in.
   ]
 }
 ```
+
+**Variants** share the widget's code and `ctx.shared` data, but each instance remembers
+which variant it is (`ctx.variant`). A variant can override `size`, `frame` (including its
+`title`) and default `settings`. `widgetctl add <widget>:<variant>` adds one from the shell.
 
 Looks:
 
@@ -109,6 +119,7 @@ the log (see §6).
 |---|---|
 | `ctx.id` | instance id (stable across restarts) |
 | `ctx.widget` | the manifest (with defaults filled) |
+| `ctx.variant` | the variant id of this instance, or `null` |
 | `ctx.root` | your content element (inside the shadow root) |
 | `ctx.shadow` | the ShadowRoot |
 | `ctx.asset(path)` | URL of a file in your widget folder |
@@ -121,7 +132,7 @@ the log (see §6).
 | `ctx.setSetting(key, value)` | change one setting programmatically (fires `settings`) |
 | `ctx.openSettings()` | open the auto-generated settings dialog |
 | `ctx.storage.get(key, def)` / `.set(key, val)` / `.delete(key)` / `.all()` | per-instance JSON storage. Synchronous reads, writes are debounced to disk |
-| `ctx.shared` | same API, shared by all instances of this widget (for example, one pet's stats) |
+| `ctx.shared` | same API, shared by all instances of this widget (for example, one pet's stats). Writes fire `shared` on the *other* instances |
 
 ### Frame (the window-like box)
 | member | |
@@ -135,7 +146,8 @@ the log (see §6).
 | `ctx.menu.add({label, action, icon?})` | add items to the right-click menu. Returns a remove function |
 
 Dragging: by the title bar, with **Ctrl+drag** anywhere, from any element inside your
-widget that has the `data-ws-drag` attribute, or freely in edit mode.
+widget that has the `data-ws-drag` attribute (buttons, inputs, links and `[data-ws-nodrag]`
+elements inside a handle stay clickable), or freely in edit mode.
 
 ### Events: `ctx.on(name, fn)` returns an `off()` function
 | event | payload |
@@ -147,6 +159,7 @@ widget that has the `data-ws-drag` attribute, or freely in edit mode.
 | `settings` | the new settings object |
 | `message` | `{from: {id, widget}, data}` from another widget, or from `widgetctl send` |
 | `layout` | `[{id, widget, rect, expanded}]` when any widget moves, resizes, appears or disappears |
+| `shared` | `{key}`: another instance of this widget wrote `ctx.shared[key]`. Re-read and re-render |
 | `editmode` | `{on}` |
 | `visibility` | `{visible}` (when the user uses "Hide widgets") |
 | `pointer` | `{x, y}`: the **global** mouse position in window coordinates, about 30 Hz, even where the layer is click-through. Tracking runs only while at least one widget listens |
@@ -233,4 +246,7 @@ single always-running 60 fps animation costs about 25% CPU on its own. In practi
   `widgetctl log -f` follows it.
 - `widgetctl snapshot out.png` renders the real widget layer to a PNG, so you can check
   visuals even when windows cover the desktop.
+- `widgetctl eval '<js>'` runs JavaScript in the shell page and prints the result as JSON
+  (testing without a mouse; widget content is reachable via
+  `document.querySelector('[data-id=<instance>] .ws-content').shadowRoot`).
 - `widgetctl add <widget-id>`, `widgetctl list`, `widgetctl reload`, `widgetctl edit`

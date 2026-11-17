@@ -73,14 +73,18 @@ export function menu(x, y, items, opts = {}) {
 
 export function gallery(widgets, onAdd, opts = {}) {
   const list = h('div', { class: 'list' });
-  for (const w of [...widgets].sort((a, b) => a.name.localeCompare(b.name))) {
-    const icon = /\.(png|svg|webp|jpe?g|gif)$/i.test(w.icon)
-      ? h('img', { src: `/w/${w.id}/${w._version}/${w.icon}`, alt: '' })
-      : w.icon;
+  // A widget with variants gets one card per variant.
+  const entries = widgets.flatMap((w) => (w.variants?.length
+    ? w.variants.map((v) => ({ w, variant: v.id, name: v.name, description: v.description, icon: v.icon }))
+    : [{ w, variant: null, name: w.name, description: w.description, icon: w.icon }]));
+  for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const icon = /\.(png|svg|webp|jpe?g|gif)$/i.test(e.icon)
+      ? h('img', { src: `/w/${e.w.id}/${e.w._version}/${e.icon}`, alt: '' })
+      : e.icon;
     list.append(h('div', { class: 'ws-card' },
       h('div', { class: 'icon' }, icon),
-      h('div', { class: 'meta' }, h('b', {}, w.name), h('span', {}, w.description || w.id)),
-      h('button', { class: 'ws-btn2 primary', onclick: () => onAdd(w) }, 'Add')));
+      h('div', { class: 'meta' }, h('b', {}, e.name), h('span', {}, e.description || e.w.id)),
+      h('button', { class: 'ws-btn2 primary', onclick: () => onAdd(e.w, e.variant) }, 'Add')));
   }
   const el = h('div', { class: 'ws-panel' },
     h('header', {}, 'Widgets', h('button', { class: 'ws-btn2', onclick: closeModal }, 'Done')),

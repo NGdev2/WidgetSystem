@@ -21,7 +21,7 @@ MANIFEST_DEFAULTS = {
 SIZE_DEFAULTS = {"w": 260, "h": 180, "minW": 80, "minH": 60, "maxW": None, "maxH": None, "resizable": True}
 FRAME_DEFAULTS = {
     "look": "glass", "title": None, "showTitle": False, "border": True, "shadow": True,
-    "radius": 18, "padding": 14, "overflow": "hidden", "tint": None,
+    "radius": 18, "padding": 14, "overflow": "hidden", "tint": None, "controls": True,
 }
 
 
@@ -75,6 +75,18 @@ def load_manifest(path: Path):
     if not styles and (wdir / "style.css").is_file():
         styles = ["style.css"]
     m["styles"] = styles
+    # Variants: one widget folder, several gallery entries (e.g. a Day and a Week view
+    # sharing code and ctx.shared data). Each variant can override size, frame and settings.
+    variants = []
+    for v in data.get("variants") or []:
+        if not isinstance(v, dict) or not ID_RE.match(str(v.get("id", ""))):
+            raise ValueError(f"variant needs an id matching [a-z0-9-]: {v!r}")
+        variants.append({
+            "id": v["id"], "name": v.get("name", v["id"]), "description": v.get("description", m["description"]),
+            "icon": v.get("icon", m["icon"]), "size": {**m["size"], **(v.get("size") or {})},
+            "frame": {"title": v.get("name", v["id"]), **(v.get("frame") or {})}, "settings": v.get("settings") or {},
+        })
+    m["variants"] = variants
     m["_dir"] = str(wdir)
     m["_version"] = _dir_version(wdir)
     return m

@@ -86,6 +86,7 @@ body.ws-hidden #ws-desk, body.ws-hidden #ws-overlay, body.ws-hidden #ws-bubbles 
   opacity: 0; transform: translateY(-2px); transition: opacity .15s, transform .15s;
 }
 .ws-frame:hover > .ws-controls, .ws-frame.ws-menu-open > .ws-controls { opacity: 1; transform: none; }
+.ws-frame[data-controls="false"] > .ws-controls { display: none; }
 .ws-frame[data-title="true"] > .ws-controls { top: 5px; }
 .ws-ctl {
   width: 24px; height: 24px; border-radius: 8px; border: 0; padding: 0; cursor: pointer;
